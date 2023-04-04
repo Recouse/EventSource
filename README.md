@@ -1,12 +1,14 @@
 # EventSource
 
-EventSource is a Swift library that provides a simple implementation of a client for [Server-Sent 
+EventSource is a Swift package that provides a simple implementation of a client for [Server-Sent 
 Events](https://html.spec.whatwg.org/multipage/server-sent-events.html) (SSE). It allows you to easily 
 receive real-time updates from a server over a persistent HTTP connection, using a simple and efficient 
 interface.
 
+It also leverages Swift concurrency features to provide a more expressive and intuitive way to handle asynchronous operations.
+
 > **Note**
-> Please note that this package was originally developed to be used in conjunction with another library, 
+> Please note that this package was originally developed to be used in conjunction with another package, 
 and as such, it may not cover all specification details. Please be aware of this limitation when 
 evaluating whether EventSource is suitable for your specific use case.
 
@@ -19,8 +21,7 @@ the following import statement to your source code.
 import EventSource
 ```
 
-#### [Xcode Package 
-Dependency](https://developer.apple.com/documentation/xcode/adding_package_dependencies_to_your_app)
+#### [Xcode Package Dependency](https://developer.apple.com/documentation/xcode/adding_package_dependencies_to_your_app)
 
 From Xcode menu: `File` > `Swift Packages` > `Add Package Dependency`
 
@@ -79,11 +80,14 @@ Use `close()` to explicilty close the connection.
 * tvOS 13.0+
 * watchOS 6.0+
 
+## Dependencies
+
+* Swift Async Algorithms https://github.com/apple/swift-async-algorithms
+
 ## Contributing
 
 Contributions to are always welcomed! If you'd like to contribute, please fork this repository and 
 submit a pull request with your changes.
-
 
 ## License
 
