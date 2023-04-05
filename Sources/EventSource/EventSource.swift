@@ -58,9 +58,7 @@ public class EventSource: NSObject {
     }
     
     private var urlSession: URLSession?
-    
-    private let delegateQueue: DispatchQueue = .init(label: String(describing: EventSource.self))
-    
+        
     private var dataTask: URLSessionDataTask?
     
     // Reconnection manage
@@ -88,13 +86,10 @@ public class EventSource: NSObject {
     }
     
     public func connect() {
-        let operationQueue = OperationQueue()
-        operationQueue.underlyingQueue = delegateQueue
-        
         urlSession = URLSession(
             configuration: urlSessionConfiguration,
             delegate: self,
-            delegateQueue: operationQueue
+            delegateQueue: nil
         )
         dataTask = urlSession?.dataTask(with: request)
         dataTask?.resume()
@@ -184,8 +179,8 @@ extension EventSource: URLSessionDataDelegate {
         }
         
         let delay = reconnectionDelay()
-        delegateQueue.asyncAfter(deadline: .now() + delay) {
-            self.connect()
+        Task.delayed(interval: delay) {
+            connect()
         }
     }
     
@@ -201,6 +196,7 @@ extension EventSource: URLSessionDataDelegate {
         }
         
         guard let httpResponse = response as? HTTPURLResponse else {
+            completionHandler(.cancel)
             return
         }
         
