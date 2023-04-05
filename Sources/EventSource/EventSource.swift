@@ -14,9 +14,10 @@ import Foundation
 /// which sends events in `text/event-stream` format.
 /// The connection remains open until closed by calling `close()`.
 ///
-public class EventSource: NSObject {
+public final class EventSource {
     /// State of the connection.
     public enum ReadyState: Int {
+        case none = -1
         case connecting = 0
         case open = 1
         case closed = 2
@@ -31,16 +32,20 @@ public class EventSource: NSObject {
     }
     
     private static let defaultTimeoutInterval: TimeInterval = 300
-    
-    private static let reconnectionInterval: TimeInterval = 1.0
-        
+            
     /// A number representing the state of the connection.
-    public private(set) var readyState: ReadyState = .connecting
+    public private(set) var readyState: ReadyState = .none
     
     /// A string representing the URL of the source.
     public let request: URLRequest
     
     private let messageParser: MessageParser
+    
+    public var maxRetryCount: Int
+    
+    public var retryDelay: Double
+    
+    private var currentRetryCount: Int = 0
     
     /// Server-sent events channel.
     public let events: AsyncChannel<ChannelSubject> = .init()
@@ -61,135 +66,100 @@ public class EventSource: NSObject {
         
     private var dataTask: URLSessionDataTask?
     
-    // Reconnection manage
+    private var sessionDelegate = SessionDelegate()
     
-    private let maxReconnectionInterval: TimeInterval
-    
-    private let backoffResetDelay: TimeInterval
-    
-    private var backoffCount: Int = 0
-    
-    private var lastConnected: Date?
+    private var sesionDelegateTask: Task<Void, Error>?
     
     public init(
         request: URLRequest,
         messageParser: MessageParser = .init(),
-        maxReconnectionInterval: TimeInterval = 30.0,
-        backoffResetDelay: TimeInterval = 60.0
+        maxRetryCount: Int = 3,
+        retryDelay: Double = 1.0
     ) {
         self.request = request
         self.messageParser = messageParser
-        self.maxReconnectionInterval = maxReconnectionInterval
-        self.backoffResetDelay = backoffResetDelay
-                
-        super.init()
+        self.maxRetryCount = maxRetryCount
+        self.retryDelay = retryDelay
+    }
+    
+    deinit {
+        sesionDelegateTask?.cancel()
+        dataTask?.cancel()
+        urlSession?.invalidateAndCancel()
     }
     
     public func connect() {
+        guard readyState == .none || readyState == .closed else {
+            return
+        }
+        
         urlSession = URLSession(
             configuration: urlSessionConfiguration,
-            delegate: self,
+            delegate: sessionDelegate,
             delegateQueue: nil
         )
         dataTask = urlSession?.dataTask(with: request)
+        
+        handleDelegateUpdates()
+        
         dataTask?.resume()
         readyState = .connecting
     }
     
-    /// Closes the connection, if one is made,
-    /// and sets the `readyState` property to `.closed`.
-    public func close() {
-        let previousState = readyState
-        readyState = .closed
-        messageParser.reset()
-        dataTask?.cancel()
-        if previousState == .open {
-            Task {
-                await events.send(.closed)
-                events.finish()
+    private func handleDelegateUpdates() {
+        let stream = AsyncStream<SessionDelegate.Event> { continuation in
+            sessionDelegate.onEvent = { event in
+                continuation.yield(event)
             }
         }
-        urlSession?.invalidateAndCancel()
-        urlSession = nil
-    }
-    
-    private func parseMessages(from data: Data) {
-        let messages = messageParser.parsed(from: data)
         
-        Task {
-            await messages.asyncForEach {
-                await events.send(.message($0))
+        sesionDelegateTask = Task {
+            try Task.checkCancellation()
+            
+            for await event in stream {
+                switch event {
+                case let .didCompleteWithError(error):
+                    // Retry if error occured
+                    do {
+                        try await handleSessionError(error)
+                    } catch {
+                        guard currentRetryCount < maxRetryCount else {
+                            return
+                        }
+                        currentRetryCount += 1
+                        connect()
+                    }
+                case let .didReceiveResponse(response, completionHandler):
+                    await handleSessionResponse(response, completionHandler: completionHandler)
+                case let .didReceiveData(data):
+                    await parseMessages(from: data)
+                }
             }
         }
     }
     
-    // MARK: - Fileprivate
-    
-    fileprivate func reconnectionDelay() -> TimeInterval {
-        backoffCount += 1
-        
-        if let lastConnected, Date().timeIntervalSince(lastConnected) >= backoffResetDelay {
-            backoffCount = 0
-        }
-        
-        lastConnected = nil
-        return min(backoffResetDelay, Self.reconnectionInterval + Double(backoffCount))
-    }
-    
-    fileprivate func setClosed() {
-        readyState = .closed
-        
-        Task {
-            await events.send(.closed)
-        }
-    }
-    
-    fileprivate func setOpen() {
-        readyState = .open
-        
-        Task {
-            await events.send(.open)
-        }
-    }
-    
-    fileprivate func sendErrorEvent(with error: Error) {
-        Task {
-            await events.send(.error(error))
-        }
-    }
-}
-
-extension EventSource: URLSessionDataDelegate {
-    public func urlSession(
-        _ session: URLSession,
-        task: URLSessionTask,
-        didCompleteWithError error: Error?
-    ) {
+    private func handleSessionError(_ error: Error?) async throws {
         guard readyState != .closed else {
             return
         }
         
         guard readyState != .open else {
-            setClosed()
+            await setClosed()
             return
         }
         
         if let error {
-            sendErrorEvent(with: error)
-        }
-        
-        let delay = reconnectionDelay()
-        Task.delayed(interval: delay) {
-            connect()
+            await sendErrorEvent(with: error)
+            throw EventSourceError.connectionError(error)
+        } else {
+            throw EventSourceError.undefinedConnectionError
         }
     }
     
-    public func urlSession(
-        _ session: URLSession,
-        dataTask: URLSessionDataTask,
-        didReceive response: URLResponse,
+    private func handleSessionResponse(
+        _ response: URLResponse,
         completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
-    ) {
+    ) async {
         guard readyState != .closed else {
             completionHandler(.cancel)
             return
@@ -202,24 +172,58 @@ extension EventSource: URLSessionDataDelegate {
         
         // Stop connection when 204 response code, otherwise keep open
         if httpResponse.statusCode != 204, 200...299 ~= httpResponse.statusCode {
-            lastConnected = Date()
-            
             if readyState != .open {
-                setOpen()
+                await setOpen()
             }
             
             completionHandler(.allow)
         } else {
-            setClosed()
+            await setClosed()
             completionHandler(.cancel)
         }
     }
     
-    public func urlSession(
-        _ session: URLSession,
-        dataTask: URLSessionDataTask,
-        didReceive data: Data
-    ) {
-        parseMessages(from: data)
+    /// Closes the connection, if one is made,
+    /// and sets the `readyState` property to `.closed`.
+    public func close() async {
+        let previousState = readyState
+        readyState = .closed
+        messageParser.reset()
+        sesionDelegateTask?.cancel()
+        dataTask?.cancel()
+        dataTask = nil
+        urlSession?.invalidateAndCancel()
+        urlSession = nil
+        
+        if previousState == .open {
+            await events.send(.closed)
+            events.finish()
+        }
+    }
+    
+    private func parseMessages(from data: Data) async {
+        let messages = messageParser.parsed(from: data)
+        
+        await messages.asyncForEach {
+            await events.send(.message($0))
+        }
+    }
+    
+    // MARK: - Fileprivate
+        
+    fileprivate func setClosed() async {
+        readyState = .closed
+        
+        await events.send(.closed)
+    }
+    
+    fileprivate func setOpen() async {
+        readyState = .open
+        
+        await events.send(.open)
+    }
+    
+    fileprivate func sendErrorEvent(with error: Error) async {
+        await events.send(.error(error))
     }
 }
