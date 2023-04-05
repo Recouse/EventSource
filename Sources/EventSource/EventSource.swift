@@ -111,6 +111,7 @@ public class EventSource: NSObject {
         if previousState == .open {
             Task {
                 await events.send(.closed)
+                events.finish()
             }
         }
         urlSession?.invalidateAndCancel()
