@@ -172,6 +172,9 @@ public final class EventSource {
         
         // Stop connection when 204 response code, otherwise keep open
         if httpResponse.statusCode != 204, 200...299 ~= httpResponse.statusCode {
+            // Reset current retries count to allow retry on the next error
+            currentRetryCount = 0
+            
             if readyState != .open {
                 await setOpen()
             }
