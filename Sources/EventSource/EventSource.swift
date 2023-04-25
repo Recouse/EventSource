@@ -194,7 +194,7 @@ public final class EventSource {
         }
     }
     
-    /// Closes the connection, if one is made,
+    /// Closes the connection, if one was made,
     /// and sets the `readyState` property to `.closed`.
     public func close() async {
         let previousState = readyState
