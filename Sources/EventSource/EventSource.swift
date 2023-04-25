@@ -86,6 +86,7 @@ public final class EventSource {
         sesionDelegateTask?.cancel()
         dataTask?.cancel()
         urlSession?.invalidateAndCancel()
+        events.finish()
     }
     
     public func connect() {
@@ -107,7 +108,12 @@ public final class EventSource {
     }
     
     private func sessionDelegateStream() -> AsyncStream<SessionDelegate.Event> {
-        AsyncStream<SessionDelegate.Event> { continuation in
+        AsyncStream<SessionDelegate.Event> { [weak self, sessionDelegate] continuation in
+            guard self != nil else {
+                continuation.finish()
+                return
+            }
+            
             sessionDelegate.onEvent = { event in
                 continuation.yield(event)
             }
@@ -115,7 +121,7 @@ public final class EventSource {
     }
     
     private func handleDelegateUpdates() {
-        sesionDelegateTask = Task {
+        sesionDelegateTask = Task { [weak self, sessionDelegateStream, currentRetryCount, maxRetryCount] in
             try Task.checkCancellation()
             
             for await event in sessionDelegateStream() {
@@ -123,18 +129,18 @@ public final class EventSource {
                 case let .didCompleteWithError(error):
                     // Retry if error occured
                     do {
-                        try await handleSessionError(error)
+                        try await self?.handleSessionError(error)
                     } catch {
                         guard currentRetryCount < maxRetryCount else {
                             return
                         }
-                        currentRetryCount += 1
-                        connect()
+                        self?.currentRetryCount += 1
+                        self?.connect()
                     }
                 case let .didReceiveResponse(response, completionHandler):
-                    await handleSessionResponse(response, completionHandler: completionHandler)
+                    await self?.handleSessionResponse(response, completionHandler: completionHandler)
                 case let .didReceiveData(data):
-                    await parseMessages(from: data)
+                    await self?.parseMessages(from: data)
                 }
             }
         }
