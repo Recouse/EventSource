@@ -68,7 +68,7 @@ public final class EventSource {
     
     private var sessionDelegate = SessionDelegate()
     
-    private var sesionDelegateTask: Task<Void, Error>?
+    private var sessionDelegateTask: Task<Void, Error>?
     
     public init(
         request: URLRequest,
@@ -83,7 +83,7 @@ public final class EventSource {
     }
     
     deinit {
-        sesionDelegateTask?.cancel()
+        sessionDelegateTask?.cancel()
         dataTask?.cancel()
         urlSession?.invalidateAndCancel()
         events.finish()
@@ -107,24 +107,11 @@ public final class EventSource {
         readyState = .connecting
     }
     
-    private func sessionDelegateStream() -> AsyncStream<SessionDelegate.Event> {
-        AsyncStream<SessionDelegate.Event> { [weak self, sessionDelegate] continuation in
-            guard self != nil else {
-                continuation.finish()
-                return
-            }
-            
-            sessionDelegate.onEvent = { event in
-                continuation.yield(event)
-            }
-        }
-    }
-    
     private func handleDelegateUpdates() {
-        sesionDelegateTask = Task { [weak self, sessionDelegateStream, currentRetryCount, maxRetryCount] in
-            try Task.checkCancellation()
-            
-            for await event in sessionDelegateStream() {
+        sessionDelegate.onEvent = { [weak self, currentRetryCount, maxRetryCount] event in
+            self?.sessionDelegateTask = Task { [weak self] in
+                try Task.checkCancellation()
+
                 switch event {
                 case let .didCompleteWithError(error):
                     // Retry if error occured
@@ -148,11 +135,12 @@ public final class EventSource {
     
     private func handleSessionError(_ error: Error?) async throws {
         guard readyState != .closed else {
+            await close()
             return
         }
         
         guard readyState != .open else {
-            await setClosed()
+            await close()
             return
         }
         
@@ -200,7 +188,7 @@ public final class EventSource {
         let previousState = readyState
         readyState = .closed
         messageParser.reset()
-        sesionDelegateTask?.cancel()
+        sessionDelegateTask?.cancel()
         dataTask?.cancel()
         dataTask = nil
         urlSession?.invalidateAndCancel()
