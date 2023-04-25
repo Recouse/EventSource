@@ -106,17 +106,19 @@ public final class EventSource {
         readyState = .connecting
     }
     
-    private func handleDelegateUpdates() {
-        let stream = AsyncStream<SessionDelegate.Event> { continuation in
+    private func sessionDelegateStream() -> AsyncStream<SessionDelegate.Event> {
+        AsyncStream<SessionDelegate.Event> { continuation in
             sessionDelegate.onEvent = { event in
                 continuation.yield(event)
             }
         }
-        
+    }
+    
+    private func handleDelegateUpdates() {
         sesionDelegateTask = Task {
             try Task.checkCancellation()
             
-            for await event in stream {
+            for await event in sessionDelegateStream() {
                 switch event {
                 case let .didCompleteWithError(error):
                     // Retry if error occured
