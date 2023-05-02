@@ -6,7 +6,9 @@
 //  Licensed under the Apache License, Version 2.0.
 //
 
+import Foundation
+
 enum EventSourceError: Error {
-    case connectionError(Error)
     case undefinedConnectionError
+    case connectionError(statusCode: Int, response: Data)
 }

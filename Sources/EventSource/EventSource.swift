@@ -45,7 +45,7 @@ public final class EventSource {
     
     public var retryDelay: Double
     
-    private var currentRetryCount: Int = 0
+    private var currentRetryCount: Int = 1
     
     /// Server-sent events channel.
     public let events: AsyncChannel<ChannelSubject> = .init()
@@ -70,6 +70,8 @@ public final class EventSource {
     
     private var sessionDelegateTask: Task<Void, Error>?
     
+    private var httpResponseErrorStatusCode: Int?
+    
     public init(
         request: URLRequest,
         messageParser: MessageParser = .init(),
@@ -90,7 +92,7 @@ public final class EventSource {
     }
     
     public func connect() {
-        guard readyState == .none || readyState == .closed else {
+        guard readyState == .none || readyState == .connecting else {
             return
         }
         
@@ -108,22 +110,13 @@ public final class EventSource {
     }
     
     private func handleDelegateUpdates() {
-        sessionDelegate.onEvent = { [weak self, currentRetryCount, maxRetryCount] event in
+        sessionDelegate.onEvent = { [weak self] event in
             self?.sessionDelegateTask = Task { [weak self] in
                 try Task.checkCancellation()
 
                 switch event {
                 case let .didCompleteWithError(error):
-                    // Retry if error occured
-                    do {
-                        try await self?.handleSessionError(error)
-                    } catch {
-                        guard currentRetryCount < maxRetryCount else {
-                            return
-                        }
-                        self?.currentRetryCount += 1
-                        self?.connect()
-                    }
+                    await self?.handleSessionError(error)
                 case let .didReceiveResponse(response, completionHandler):
                     await self?.handleSessionResponse(response, completionHandler: completionHandler)
                 case let .didReceiveData(data):
@@ -133,22 +126,26 @@ public final class EventSource {
         }
     }
     
-    private func handleSessionError(_ error: Error?) async throws {
+    private func handleSessionError(_ error: Error?) async {
         guard readyState != .closed else {
             await close()
             return
         }
         
-        guard readyState != .open else {
-            await close()
-            return
-        }
-        
+        // Send error event
         if let error {
             await sendErrorEvent(with: error)
-            throw EventSourceError.connectionError(error)
         } else {
-            throw EventSourceError.undefinedConnectionError
+            await sendErrorEvent(with: EventSourceError.undefinedConnectionError)
+        }
+        
+        // Retry connection or close
+        if currentRetryCount < maxRetryCount {
+            currentRetryCount += 1
+            try? await Task.sleep(duration: retryDelay)
+            connect()
+        } else {
+            await close()
         }
     }
     
@@ -174,12 +171,11 @@ public final class EventSource {
             if readyState != .open {
                 await setOpen()
             }
-            
-            completionHandler(.allow)
         } else {
-            await setClosed()
-            completionHandler(.cancel)
+            httpResponseErrorStatusCode = httpResponse.statusCode
         }
+        
+        completionHandler(.allow)
     }
     
     /// Closes the connection, if one was made,
@@ -196,11 +192,20 @@ public final class EventSource {
         
         if previousState == .open {
             await events.send(.closed)
-            events.finish()
         }
+        
+        events.finish()
     }
     
     private func parseMessages(from data: Data) async {
+        if let httpResponseErrorStatusCode {
+            self.httpResponseErrorStatusCode = nil
+            await handleSessionError(
+                EventSourceError.connectionError(statusCode: httpResponseErrorStatusCode, response: data)
+            )
+            return
+        }
+        
         let messages = messageParser.parsed(from: data)
         
         await messages.asyncForEach {
