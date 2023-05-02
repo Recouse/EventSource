@@ -8,7 +8,7 @@
 
 import Foundation
 
-enum EventSourceError: Error {
+public enum EventSourceError: Error {
     case undefinedConnectionError
     case connectionError(statusCode: Int, response: Data)
 }
