@@ -128,10 +128,8 @@ public final class EventSource {
         // Send error event
         if let error {
             await sendErrorEvent(with: error)
-        } else {
-            await sendErrorEvent(with: EventSourceError.undefinedConnectionError)
         }
-        
+                
         // Retry connection or close
         if currentRetryCount < maxRetryCount {
             currentRetryCount += 1
@@ -155,11 +153,17 @@ public final class EventSource {
             completionHandler(.cancel)
             return
         }
-        
+                
         // Stop connection when 204 response code, otherwise keep open
-        if httpResponse.statusCode != 204, 200...299 ~= httpResponse.statusCode {
+        guard httpResponse.statusCode != 204 else {
+            completionHandler(.cancel)
+            await close()
+            return
+        }
+        
+        if 200...299 ~= httpResponse.statusCode {
             // Reset current retries count to allow retry on the next error
-            currentRetryCount = 0
+            currentRetryCount = 1
             
             if readyState != .open {
                 await setOpen()
@@ -207,12 +211,6 @@ public final class EventSource {
     }
     
     // MARK: - Fileprivate
-        
-    fileprivate func setClosed() async {
-        readyState = .closed
-        
-        await events.send(.closed)
-    }
     
     fileprivate func setOpen() async {
         readyState = .open
