@@ -84,13 +84,6 @@ public final class EventSource {
         self.retryDelay = retryDelay
     }
     
-    deinit {
-        sessionDelegateTask?.cancel()
-        dataTask?.cancel()
-        urlSession?.invalidateAndCancel()
-        events.finish()
-    }
-    
     public func connect() {
         guard readyState == .none || readyState == .connecting else {
             return
