@@ -8,6 +8,9 @@
 
 import AsyncAlgorithms
 import Foundation
+#if canImport(FoundationNetworking)
+    import FoundationNetworking
+#endif
 
 ///
 /// An `EventSource` instance opens a persistent connection to an HTTP server,

@@ -7,6 +7,9 @@
 //
 
 import Foundation
+#if canImport(FoundationNetworking)
+    import FoundationNetworking
+#endif
 
 final class SessionDelegate: NSObject, URLSessionDataDelegate {
     enum Event {
