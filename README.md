@@ -91,5 +91,5 @@ submit a pull request with your changes.
 
 ## License
 
-EventSource is released under the Apache License v2.0. See [LICENSE](LICENSE) for more information.
+EventSource is released under the MIT License. See [LICENSE](LICENSE) for more information.
 
