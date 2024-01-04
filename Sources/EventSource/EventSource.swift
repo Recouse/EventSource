@@ -34,7 +34,7 @@ public final class EventSource {
         case closed
     }
     
-    private static let defaultTimeoutInterval: TimeInterval = 300
+    public var defaultTimeoutInterval: TimeInterval
             
     /// A number representing the state of the connection.
     public private(set) var readyState: ReadyState = .none
@@ -60,8 +60,8 @@ public final class EventSource {
             HTTPHeaderField.cacheControl: CacheControl.noStore,
             HTTPHeaderField.lastEventID: messageParser.lastMessageId
         ]
-        configuration.timeoutIntervalForRequest = Self.defaultTimeoutInterval
-        configuration.timeoutIntervalForResource = Self.defaultTimeoutInterval
+        configuration.timeoutIntervalForRequest = self.defaultTimeoutInterval
+        configuration.timeoutIntervalForResource = self.defaultTimeoutInterval
         return configuration
     }
     
@@ -79,12 +79,14 @@ public final class EventSource {
         request: URLRequest,
         messageParser: MessageParser = .init(),
         maxRetryCount: Int = 3,
-        retryDelay: Double = 1.0
+        retryDelay: Double = 1.0,
+        defaultTimeoutInterval: TimeInterval = 300
     ) {
         self.request = request
         self.messageParser = messageParser
         self.maxRetryCount = maxRetryCount
         self.retryDelay = retryDelay
+        self.defaultTimeoutInterval = defaultTimeoutInterval
     }
     
     public func connect() {
