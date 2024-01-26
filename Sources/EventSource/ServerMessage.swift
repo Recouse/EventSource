@@ -12,17 +12,20 @@ public struct ServerMessage {
     public var id: String?
     public var event: String?
     public var data: String?
+    public var other: [String: String]?
     public var time: String?
     
     init(
         id: String? = nil,
         event: String? = nil,
         data: String? = nil,
+        other: [String: String]? = nil,
         time: String? = nil
     ) {
         self.id = id
         self.event = event
         self.data = data
+        self.other = other
         self.time = time
     }
     
@@ -39,6 +42,10 @@ public struct ServerMessage {
             return false
         }
         
+        if let other, !other.isEmpty {
+            return false
+        }
+        
         if let time, !time.isEmpty {
             return false
         }
@@ -52,25 +59,41 @@ public struct ServerMessage {
         var message = ServerMessage()
         
         for row in rows {
+            // Skip the line if it is empty or it starts with a colon character
+            if row.isEmpty, row.first == MessageParser.colon {
+                continue
+            }
+            
             let keyValue = row.split(separator: MessageParser.colon, maxSplits: 1)
             let key = keyValue[0].utf8String.trimmingCharacters(in: .whitespaces)
-            let value = keyValue[1].utf8String.trimmingCharacters(in: .whitespaces)
+            let value = keyValue[safe: 1]?.utf8String.trimmingCharacters(in: .whitespaces)
             
             switch key {
             case "id":
-                message.id = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                message.id = value?.trimmingCharacters(in: .whitespaces)
             case "event":
-                message.event = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                message.event = value?.trimmingCharacters(in: .whitespaces)
             case "data":
                 if let existingData = message.data {
-                    message.data = existingData + "\n" + value.trimmingCharacters(in: .whitespacesAndNewlines)
+                    message.data = existingData + "\n" + (value?.trimmingCharacters(in: .whitespaces) ?? "")
                 } else {
-                    message.data = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                    message.data = value?.trimmingCharacters(in: .whitespaces)
                 }
             case "time":
-                message.time = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                message.time = value?.trimmingCharacters(in: .whitespaces)
             default:
-                continue
+                // If the line is not empty but does not contain a color character
+                // add it to the other fields using the whole line as the field name,
+                // and the empty string as the field value.
+                if row.contains(MessageParser.colon) == false {
+                    let string = row.utf8String
+                    if var other = message.other {
+                        other[string] = ""
+                        message.other = other
+                    } else {
+                        message.other = [string: ""]
+                    }
+                }
             }
         }
         
@@ -85,5 +108,14 @@ public struct ServerMessage {
 fileprivate extension Data {
     var utf8String: String {
         String(decoding: self, as: UTF8.self)
+    }
+}
+
+fileprivate extension Array {
+    subscript(safe index: Int) -> Element? {
+        guard index >= 0, index < endIndex else {
+            return nil
+        }
+        return self[index]
     }
 }

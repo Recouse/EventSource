@@ -85,6 +85,11 @@ final class MessageParserTests: XCTestCase {
         id : 4
         event : ping
         data : test 4
+        
+        test 5
+        
+        message 6
+        message 6-1
         """
         let data = Data(text.utf8)
                 
@@ -109,5 +114,12 @@ final class MessageParserTests: XCTestCase {
         XCTAssertEqual(messages[3].id!, "4")
         XCTAssertEqual(messages[3].event!, "ping")
         XCTAssertEqual(messages[3].data!, "test 4")
+        
+        XCTAssertNotNil(messages[4].other)
+        XCTAssertEqual(messages[4].other!["test 5"], "")
+        
+        XCTAssertNotNil(messages[5].other)
+        XCTAssertEqual(messages[5].other!["message 6"], "")
+        XCTAssertEqual(messages[5].other!["message 6-1"], "")
     }
 }
