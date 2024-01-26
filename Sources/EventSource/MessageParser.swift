@@ -8,17 +8,15 @@
 
 import Foundation
 
-public class MessageParser {
-    public static let lf: UInt8 = 0x0A
-    public static let semicolon: UInt8 = 0x3a
+public struct MessageParser {
+    public var parse: (_ data: Data) -> [ServerMessage]
+}
+
+public extension MessageParser {
+    static let lf: UInt8 = 0x0A
+    static let semicolon: UInt8 = 0x3a
     
-    public private(set) var lastMessageId: String = ""
-    
-    public init() {
-        
-    }
-    
-    public func parsed(from data: Data) -> [ServerMessage] {
+    static let live = Self(parse: { data in
         // Split message with double newline
         let rawMessages: [Data]
         if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *) {
@@ -30,17 +28,8 @@ public class MessageParser {
         // Parse data to ServerMessage model
         let messages: [ServerMessage] = rawMessages.compactMap(ServerMessage.parse(from:))
         
-        // Update last message ID
-        if let lastMessageWithId = messages.last(where: { $0.id != nil }) {
-            lastMessageId = lastMessageWithId.id ?? ""
-        }
-        
         return messages
-    }
-    
-    public func reset() {
-        lastMessageId = ""
-    }
+    })
 }
 
 fileprivate extension Data {
