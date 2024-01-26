@@ -52,7 +52,7 @@ public struct ServerMessage {
         var message = ServerMessage()
         
         for row in rows {
-            let keyValue = row.split(separator: MessageParser.semicolon, maxSplits: 1)
+            let keyValue = row.split(separator: MessageParser.colon, maxSplits: 1)
             let key = keyValue[0].utf8String.trimmingCharacters(in: .whitespaces)
             let value = keyValue[1].utf8String.trimmingCharacters(in: .whitespaces)
             
