@@ -50,6 +50,8 @@ public final class EventSource {
     
     private var currentRetryCount: Int = 1
     
+    public private(set) var lastMessageId: String = ""
+    
     /// Server-sent events channel.
     public let events: AsyncChannel<ChannelSubject> = .init()
     
@@ -58,7 +60,7 @@ public final class EventSource {
         configuration.httpAdditionalHeaders = [
             HTTPHeaderField.accept: Accept.eventStream,
             HTTPHeaderField.cacheControl: CacheControl.noStore,
-            HTTPHeaderField.lastEventID: messageParser.lastMessageId
+            HTTPHeaderField.lastEventID: lastMessageId
         ]
         configuration.timeoutIntervalForRequest = self.timeoutInterval
         configuration.timeoutIntervalForResource = self.timeoutInterval
@@ -77,7 +79,7 @@ public final class EventSource {
     
     public init(
         request: URLRequest,
-        messageParser: MessageParser = .init(),
+        messageParser: MessageParser = .live,
         maxRetryCount: Int = 3,
         retryDelay: Double = 1.0,
         timeoutInterval: TimeInterval = 300
@@ -185,7 +187,7 @@ public final class EventSource {
     public func close() async {
         let previousState = readyState
         readyState = .closed
-        messageParser.reset()
+        lastMessageId = ""
         sessionDelegateTask?.cancel()
         dataTask?.cancel()
         dataTask = nil
@@ -208,7 +210,12 @@ public final class EventSource {
             return
         }
         
-        let messages = messageParser.parsed(from: data)
+        let messages = messageParser.parse(data)
+        
+        // Update last message ID
+        if let lastMessageWithId = messages.last(where: { $0.id != nil }) {
+            lastMessageId = lastMessageWithId.id ?? ""
+        }
         
         await messages.asyncForEach {
             await events.send(.message($0))
