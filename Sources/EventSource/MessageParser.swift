@@ -19,7 +19,7 @@ public extension MessageParser {
     static let live = Self(parse: { data in
         // Split message with double newline
         let rawMessages: [Data]
-        if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *) {
+        if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
             rawMessages = data.split(separator: [Self.lf, Self.lf])
         } else {
             rawMessages = data.split(by: [Self.lf, Self.lf])
@@ -37,6 +37,7 @@ fileprivate extension Data {
     @available(iOS, deprecated: 16.0, obsoleted: 16.0, message: "This method is not recommended on iOS 16.0+")
     @available(watchOS, deprecated: 9.0, obsoleted: 9.0, message: "This method is not recommended on watchOS 9.0+")
     @available(tvOS, deprecated: 16.0, obsoleted: 16.0, message: "This method is not recommended on tvOS 16.0+")
+    @available(visionOS, deprecated: 1.0, obsoleted: 1.1, message: "This method is not recommended on visionOS 1.0+")
     func split(by separator: [UInt8]) -> [Data] {
         let doubleNewline = Data(separator)
         var splits: [Data] = []

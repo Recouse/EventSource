@@ -1,5 +1,10 @@
 # EventSource
 
+[![Build macOS](https://github.com/Recouse/EventSource/actions/workflows/macos.yml/badge.svg)](https://github.com/Recouse/EventSource/actions/workflows/macos.yml)
+[![Build Linux](https://github.com/Recouse/EventSource/actions/workflows/linux.yml/badge.svg)](https://github.com/Recouse/EventSource/actions/workflows/linux.yml)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FRecouse%2FEventSource%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/Recouse/EventSource)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FRecouse%2FEventSource%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/Recouse/EventSource)
+
 EventSource is a Swift package that provides a simple implementation of a client for [Server-Sent 
 Events](https://html.spec.whatwg.org/multipage/server-sent-events.html) (SSE). It allows you to easily 
 receive real-time updates from a server over a persistent HTTP connection, using a simple and efficient 
@@ -47,8 +52,7 @@ And then, include "EventSource" as a dependency for your target:
 
 ## Usage
 
-Using EventSource is easy. Simply create an instance of EventSource with the URLReqh
-uest of the SSE endpoint you want to connect to, and await for events:
+Using EventSource is easy. Simply create an instance of EventSource with the URLRequest of the SSE endpoint you want to connect to, and await for events:
 ```swift
 import EventSource
 
