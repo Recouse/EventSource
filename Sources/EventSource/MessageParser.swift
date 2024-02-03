@@ -14,7 +14,7 @@ public struct MessageParser {
 
 public extension MessageParser {
     static let lf: UInt8 = 0x0A
-    static let colon: UInt8 = 0x3a
+    static let colon: UInt8 = 0x3A
     
     static let live = Self(parse: { data in
         // Split message with double newline

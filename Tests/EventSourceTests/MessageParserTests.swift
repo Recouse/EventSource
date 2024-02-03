@@ -122,4 +122,38 @@ final class MessageParserTests: XCTestCase {
         XCTAssertEqual(messages[5].other!["message 6"], "")
         XCTAssertEqual(messages[5].other!["message 6-1"], "")
     }
+    
+    func testJSONData() {
+        let parser = MessageParser.live
+        let jsonDecoder = JSONDecoder()
+        
+        let text = """
+        data: {\"id\":\"abcd-1\",\"type\":\"message\",\"content\":\"\\ntest\\n\"}
+
+        id: abcd-2
+        data: {\"id\":\"abcd-2\",\"type\":\"message\",\"content\":\"\\n\\n"}
+        
+        """
+        let data = Data(text.utf8)
+        
+        let messages = parser.parse(data)
+        
+        XCTAssertNotNil(messages[0].data)
+        XCTAssertNotNil(messages[1].data)
+        
+        do {
+            let decoded1 = try jsonDecoder.decode(TestModel.self, from: Data(messages[0].data!.utf8))
+            let decoded2 = try jsonDecoder.decode(TestModel.self, from: Data(messages[1].data!.utf8))
+        } catch {
+            XCTFail("The JSON strings provided in the test data were parsed incorrectly.")
+        }
+    }
+}
+
+fileprivate extension MessageParserTests {
+    struct TestModel: Decodable {
+        let id: String
+        let type: String
+        let content: String
+    }
 }
