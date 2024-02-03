@@ -52,7 +52,7 @@ And then, include "EventSource" as a dependency for your target:
 
 ## Usage
 
-Using EventSource is easy. Simply create an new task from an instance of EventSource with the URLRequest of the SSE endpoint you want to connect to, and await for events:
+Using EventSource is easy. Simply create a new task from an instance of EventSource with the URLRequest of the SSE endpoint you want to connect to, and await for events:
 ```swift
 import EventSource
 
