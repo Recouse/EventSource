@@ -52,16 +52,14 @@ And then, include "EventSource" as a dependency for your target:
 
 ## Usage
 
-Using EventSource is easy. Simply create an instance of EventSource with the URLRequest of the SSE endpoint you want to connect to, and await for events:
+Using EventSource is easy. Simply create an new task from an instance of EventSource with the URLRequest of the SSE endpoint you want to connect to, and await for events:
 ```swift
 import EventSource
 
-...
+let eventSource = EventSource()
+let dataTask = eventSource.dataTask(for: urlRequest)
 
-let eventSource = EventSource(request: urlRequest)
-eventSource.connect()
-
-for await event in eventSource.events {
+for await event in dataTask.events() {
     switch event {
     case .open:
         print("Connection was opened.")
@@ -75,7 +73,7 @@ for await event in eventSource.events {
 }
 ```
 
-Use `close()` to explicilty close the connection.
+Use `dataTask.cancel()` to explicitly close the connection. However, in that case `.closed` event won't be emitted.
 
 ## Compatibility
 
@@ -87,7 +85,7 @@ Use `close()` to explicilty close the connection.
 
 ## Dependencies
 
-* Swift Async Algorithms https://github.com/apple/swift-async-algorithms
+No dependencies.
 
 ## Contributing
 
