@@ -16,15 +16,9 @@ let package = Package(
             name: "EventSource",
             targets: ["EventSource"]),
     ],
-    dependencies: [
-         .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.0.0")
-    ],
     targets: [
         .target(
-            name: "EventSource",
-            dependencies: [
-                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms")
-            ]),
+            name: "EventSource"),
         .testTarget(
             name: "EventSourceTests",
             dependencies: ["EventSource"]),
