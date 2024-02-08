@@ -1,4 +1,4 @@
-# EventSource
+x# EventSource
 
 [![Build macOS](https://github.com/Recouse/EventSource/actions/workflows/macos.yml/badge.svg)](https://github.com/Recouse/EventSource/actions/workflows/macos.yml)
 [![Build Linux](https://github.com/Recouse/EventSource/actions/workflows/linux.yml/badge.svg)](https://github.com/Recouse/EventSource/actions/workflows/linux.yml)
@@ -12,7 +12,7 @@ interface.
 
 It also leverages Swift concurrency features to provide a more expressive and intuitive way to handle asynchronous operations.
 
-> **Note**
+> [!Note]
 > Please note that this package was originally developed to be used in conjunction with another package, 
 and as such, it may not cover all specification details. Please be aware of this limitation when 
 evaluating whether EventSource is suitable for your specific use case.
