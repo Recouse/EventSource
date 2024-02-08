@@ -1,4 +1,4 @@
-x# EventSource
+# EventSource
 
 [![Build macOS](https://github.com/Recouse/EventSource/actions/workflows/macos.yml/badge.svg)](https://github.com/Recouse/EventSource/actions/workflows/macos.yml)
 [![Build Linux](https://github.com/Recouse/EventSource/actions/workflows/linux.yml/badge.svg)](https://github.com/Recouse/EventSource/actions/workflows/linux.yml)
