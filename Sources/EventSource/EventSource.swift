@@ -55,13 +55,21 @@ public struct EventSource {
 }
 
 public extension EventSource {
-    class DataTask {
-        /// A number representing the state of the connection.
+    /// An EventSource task that handles connecting to the URLRequest and creating an event stream.
+    ///
+    /// Creation of a task is exclusively handled by ``EventSource``. A new task can be created by calling
+    /// ``EventSource/EventSource/dataTask(for:)`` method on the EventSource instance. After creating a task,
+    /// it can be started by iterating event stream returned by ``DataTask/events()``.
+    final class DataTask {
+        /// A value representing the state of the connection.
         public private(set) var readyState: ReadyState = .none
         
+        /// Last event's ID string value.
+        ///
+        /// Sent in a HTTP request header and used when a user is to reestablish the connection.
         public private(set) var lastMessageId: String = ""
         
-        /// A string representing the URL of the source.
+        /// A URLRequest of the events source.
         public let urlRequest: URLRequest
         
         private let eventParser: EventParser
@@ -218,6 +226,12 @@ public extension EventSource {
             }
         }
         
+        /// Cancels the task.
+        ///
+        /// ## Notes:
+        /// The event stream supports cooperative task cancellation. However, it should be noted that
+        /// canceling the parent Task only cancels the underlying `URLSessionDataTask` of
+        /// ``EventSource/EventSource/DataTask``; this does not actually stop the ongoing request.
         public func cancel() {
             readyState = .closed
             lastMessageId = ""
