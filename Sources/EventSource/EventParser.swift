@@ -1,5 +1,5 @@
 //
-//  MessageParser.swift
+//  EventParser.swift
 //  EventSource
 //
 //  Copyright © 2023 Firdavs Khaydarov (Recouse). All rights reserved.
@@ -8,11 +8,12 @@
 
 import Foundation
 
-public struct MessageParser {
-    public var parse: (_ data: Data) -> [ServerMessage]
+/// Event parser is used to parse text data into ``ServerEvent``.
+public struct EventParser {
+    public var parse: (_ data: Data) -> [ServerEvent]
 }
 
-public extension MessageParser {
+public extension EventParser {
     static let lf: UInt8 = 0x0A
     static let colon: UInt8 = 0x3A
     
@@ -26,7 +27,7 @@ public extension MessageParser {
         }
         
         // Parse data to ServerMessage model
-        let messages: [ServerMessage] = rawMessages.compactMap(ServerMessage.parse(from:))
+        let messages: [ServerEvent] = rawMessages.compactMap(ServerEvent.parse(from:))
         
         return messages
     })

@@ -6,9 +6,9 @@
 import XCTest
 @testable import EventSource
 
-final class MessageParserTests: XCTestCase {
+final class EventParserTests: XCTestCase {
     func testMessagesParsing() throws {
-        let parser = MessageParser.live
+        let parser = EventParser.live
         
         let text = """
         data: test 1
@@ -57,7 +57,7 @@ final class MessageParserTests: XCTestCase {
     }
     
     func testEmptyData() {
-        let parser = MessageParser.live
+        let parser = EventParser.live
         
         let text = """
         
@@ -71,7 +71,7 @@ final class MessageParserTests: XCTestCase {
     }
     
     func testOtherMessageFormats() {
-        let parser = MessageParser.live
+        let parser = EventParser.live
         
         let text = """
         data : test 1
@@ -124,7 +124,7 @@ final class MessageParserTests: XCTestCase {
     }
     
     func testJSONData() {
-        let parser = MessageParser.live
+        let parser = EventParser.live
         let jsonDecoder = JSONDecoder()
         
         let text = """
@@ -150,7 +150,7 @@ final class MessageParserTests: XCTestCase {
     }
 }
 
-fileprivate extension MessageParserTests {
+fileprivate extension EventParserTests {
     struct TestModel: Decodable {
         let id: String
         let type: String

@@ -28,27 +28,27 @@ public struct EventSource {
     /// Event type.
     public enum EventType {
         case error(Error)
-        case message(ServerMessage)
+        case event(ServerEvent)
         case open
         case closed
     }
     
-    private let messageParser: MessageParser
+    private let eventParser: EventParser
     
     public var timeoutInterval: TimeInterval
     
     public init(
-        messageParser: MessageParser = .live,
+        eventParser: EventParser = .live,
         timeoutInterval: TimeInterval = 300
     ) {
-        self.messageParser = messageParser
+        self.eventParser = eventParser
         self.timeoutInterval = timeoutInterval
     }
     
     public func dataTask(for urlRequest: URLRequest) -> DataTask {
         DataTask(
             urlRequest: urlRequest,
-            messageParser: messageParser,
+            eventParser: eventParser,
             timeoutInterval: timeoutInterval
         )
     }
@@ -64,7 +64,7 @@ public extension EventSource {
         /// A string representing the URL of the source.
         public let urlRequest: URLRequest
         
-        private let messageParser: MessageParser
+        private let eventParser: EventParser
         
         private let timeoutInterval: TimeInterval
         
@@ -92,14 +92,15 @@ public extension EventSource {
                 
         internal init(
             urlRequest: URLRequest,
-            messageParser: MessageParser,
+            eventParser: EventParser,
             timeoutInterval: TimeInterval
         ) {
             self.urlRequest = urlRequest
-            self.messageParser = messageParser
+            self.eventParser = eventParser
             self.timeoutInterval = timeoutInterval
         }
         
+        /// Creates and returns event stream.
         public func events() -> AsyncStream<EventType> {
             AsyncStream { continuation in
                 continuation.onTermination = { @Sendable _ in
@@ -194,15 +195,15 @@ public extension EventSource {
                         return
                     }
                     
-                    let messages = messageParser.parse(data)
+                    let events = eventParser.parse(data)
                     
                     // Update last message ID
-                    if let lastMessageWithId = messages.last(where: { $0.id != nil }) {
+                    if let lastMessageWithId = events.last(where: { $0.id != nil }) {
                         lastMessageId = lastMessageWithId.id ?? ""
                     }
                     
-                    messages.forEach {
-                        continuation.yield(.message($0))
+                    events.forEach {
+                        continuation.yield(.event($0))
                     }
                 }
                 
