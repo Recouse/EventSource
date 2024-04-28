@@ -9,15 +9,15 @@
 import Foundation
 
 /// Event parser is used to parse text data into ``ServerEvent``.
-public struct EventParser {
-    public var parse: (_ data: Data) -> [ServerEvent]
+public struct EventParser: Sendable {
+    public var parse: @Sendable (_ data: Data) -> [ServerEvent]
 }
 
 public extension EventParser {
     static let lf: UInt8 = 0x0A
     static let colon: UInt8 = 0x3A
     
-    static let live = Self(parse: { data in
+    nonisolated(unsafe) static let live = Self(parse: { data in
         // Split message with double newline
         let rawMessages: [Data]
         if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
