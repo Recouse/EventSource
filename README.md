@@ -34,7 +34,7 @@ From Xcode menu: `File` > `Swift Packages` > `Add Package Dependency`
 https://github.com/Recouse/EventSource
 ```
 
-#### [Swift Package Manager](https://www.swift.org/package-manager)
+#### [Swift Package Manager](https://www.swift.org/documentation/package-manager/)
 
 In your `Package.swift` file, first add the following to the package `dependencies`:
 
