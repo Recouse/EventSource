@@ -89,8 +89,7 @@ No dependencies.
 
 ## Contributing
 
-Contributions to are always welcomed! If you'd like to contribute, please fork this repository and 
-submit a pull request with your changes.
+Contributions to are always welcomed! For more details see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
