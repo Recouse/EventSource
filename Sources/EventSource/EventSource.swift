@@ -182,6 +182,7 @@ public extension EventSource {
                     cancel()
                     if previousState == .open {
                         continuation.yield(.closed)
+                        continuation.finish()
                     }
                 }
                 
@@ -213,6 +214,7 @@ public extension EventSource {
                 
                 func sendErrorEvent(with error: Error) {
                     continuation.yield(.error(error))
+                    continuation.finish()
                 }
             }
         }
