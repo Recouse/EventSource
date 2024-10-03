@@ -214,7 +214,6 @@ public extension EventSource {
                 
                 func sendErrorEvent(with error: Error) {
                     continuation.yield(.error(error))
-                    continuation.finish()
                 }
             }
         }
