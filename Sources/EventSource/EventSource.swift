@@ -179,11 +179,11 @@ public extension EventSource {
                 /// - Returns: State before closing.
                 @Sendable func close() {
                     let previousState = self.readyState
-                    cancel()
-                    if previousState == .open {
+                    if previousState != .closed {
                         continuation.yield(.closed)
                         continuation.finish()
                     }
+                    cancel()
                 }
                 
                 func parseMessages(from data: Data) {
