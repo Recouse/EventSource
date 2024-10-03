@@ -182,6 +182,7 @@ public extension EventSource {
                     cancel()
                     if previousState == .open {
                         continuation.yield(.closed)
+                        continuation.finish()
                     }
                 }
                 
