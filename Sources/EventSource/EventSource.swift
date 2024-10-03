@@ -68,6 +68,8 @@ public extension EventSource {
         
         private let timeoutInterval: TimeInterval
         
+        private var continuation: AsyncStream<EventType>.Continuation?
+        
         private var urlSession: URLSession?
         
         private var sessionDelegate = SessionDelegate()
@@ -102,9 +104,11 @@ public extension EventSource {
         
         public func events() -> AsyncStream<EventType> {
             AsyncStream { continuation in
-                continuation.onTermination = { @Sendable _ in
-                    close()
+                continuation.onTermination = { @Sendable [weak self] _ in
+                    self?.close()
                 }
+                
+                self.continuation = continuation
                 
                 urlSession = URLSession(
                     configuration: urlSessionConfiguration,
@@ -112,7 +116,9 @@ public extension EventSource {
                     delegateQueue: nil
                 )
                 
-                sessionDelegate.onEvent = { event in
+                sessionDelegate.onEvent = { [weak self] event in
+                    guard let self else { return }
+                    
                     switch event {
                     case let .didCompleteWithError(error):
                         handleSessionError(error)
@@ -126,96 +132,96 @@ public extension EventSource {
                 urlSessionDataTask = urlSession!.dataTask(with: urlRequest)
                 urlSessionDataTask!.resume()
                 readyState = .connecting
-                
-                func handleSessionError(_ error: Error?) {
-                    guard readyState != .closed else {
-                        close()
-                        return
-                    }
-                    
-                    // Send error event
-                    if let error {
-                        sendErrorEvent(with: error)
-                    }
-                            
-                    // Close connection
-                    close()
-                }
-                
-                func handleSessionResponse(
-                    _ response: URLResponse,
-                    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
-                ) {
-                    guard readyState != .closed else {
-                        completionHandler(.cancel)
-                        return
-                    }
-                    
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        completionHandler(.cancel)
-                        return
-                    }
-                            
-                    // Stop connection when 204 response code, otherwise keep open
-                    guard httpResponse.statusCode != 204 else {
-                        completionHandler(.cancel)
-                        close()
-                        return
-                    }
-                    
-                    if 200...299 ~= httpResponse.statusCode {
-                        if readyState != .open {
-                            setOpen()
-                        }
-                    } else {
-                        httpResponseErrorStatusCode = httpResponse.statusCode
-                    }
-                    
-                    completionHandler(.allow)
-                }
-                
-                /// Closes the connection, if one was made,
-                /// and sets the `readyState` property to `.closed`.
-                /// - Returns: State before closing.
-                @Sendable func close() {
-                    let previousState = self.readyState
-                    if previousState != .closed {
-                        continuation.yield(.closed)
-                        continuation.finish()
-                    }
-                    cancel()
-                }
-                
-                func parseMessages(from data: Data) {
-                    if let httpResponseErrorStatusCode {
-                        self.httpResponseErrorStatusCode = nil
-                        handleSessionError(
-                            EventSourceError.connectionError(statusCode: httpResponseErrorStatusCode, response: data)
-                        )
-                        return
-                    }
-                    
-                    let messages = messageParser.parse(data)
-                    
-                    // Update last message ID
-                    if let lastMessageWithId = messages.last(where: { $0.id != nil }) {
-                        lastMessageId = lastMessageWithId.id ?? ""
-                    }
-                    
-                    messages.forEach {
-                        continuation.yield(.message($0))
-                    }
-                }
-                
-                func setOpen() {
-                    readyState = .open
-                    continuation.yield(.open)
-                }
-                
-                func sendErrorEvent(with error: Error) {
-                    continuation.yield(.error(error))
-                }
             }
+        }
+        
+        private func handleSessionError(_ error: Error?) {
+            guard readyState != .closed else {
+                close()
+                return
+            }
+            
+            // Send error event
+            if let error {
+                sendErrorEvent(with: error)
+            }
+                    
+            // Close connection
+            close()
+        }
+        
+        private func handleSessionResponse(
+            _ response: URLResponse,
+            completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+        ) {
+            guard readyState != .closed else {
+                completionHandler(.cancel)
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completionHandler(.cancel)
+                return
+            }
+                    
+            // Stop connection when 204 response code, otherwise keep open
+            guard httpResponse.statusCode != 204 else {
+                completionHandler(.cancel)
+                close()
+                return
+            }
+            
+            if 200...299 ~= httpResponse.statusCode {
+                if readyState != .open {
+                    setOpen()
+                }
+            } else {
+                httpResponseErrorStatusCode = httpResponse.statusCode
+            }
+            
+            completionHandler(.allow)
+        }
+        
+        /// Closes the connection, if one was made,
+        /// and sets the `readyState` property to `.closed`.
+        /// - Returns: State before closing.
+        @Sendable private func close() {
+            let previousState = self.readyState
+            if previousState != .closed {
+                continuation?.yield(.closed)
+                continuation?.finish()
+            }
+            cancel()
+        }
+        
+        private func parseMessages(from data: Data) {
+            if let httpResponseErrorStatusCode {
+                self.httpResponseErrorStatusCode = nil
+                handleSessionError(
+                    EventSourceError.connectionError(statusCode: httpResponseErrorStatusCode, response: data)
+                )
+                return
+            }
+            
+            let messages = messageParser.parse(data)
+            
+            // Update last message ID
+            if let lastMessageWithId = messages.last(where: { $0.id != nil }) {
+                lastMessageId = lastMessageWithId.id ?? ""
+            }
+            
+            messages.forEach {
+                continuation?.yield(.message($0))
+            }
+        }
+        
+        private func setOpen() {
+            readyState = .open
+            continuation?.yield(.open)
+        }
+        
+        private func sendErrorEvent(with error: Error) {
+            continuation?.yield(.error(error))
         }
         
         public func cancel() {
