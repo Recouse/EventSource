@@ -3,11 +3,12 @@
 //  Licensed under the MIT License.
 //
 
-import XCTest
+import Foundation
+import Testing
 @testable import EventSource
 
-final class EventParserTests: XCTestCase {
-    func testMessagesParsing() throws {
+struct EventParserTests {
+    @Test func messagesParsing() throws {
         let parser = EventParser.live
         
         let text = """
@@ -30,33 +31,33 @@ final class EventParserTests: XCTestCase {
         
         let messages = parser.parse(data)
         
-        XCTAssertEqual(messages.count, 5)
+        #expect(messages.count == 5)
         
-        XCTAssertNotNil(messages[0].data)
-        XCTAssertEqual(messages[0].data!, "test 1")
+        #expect(messages[0].data != nil)
+        #expect(messages[0].data! == "test 1")
         
-        XCTAssertNotNil(messages[1].data)
-        XCTAssertEqual(messages[1].data!, "test 2\ncontinued")
+        #expect(messages[1].data != nil)
+        #expect(messages[1].data! == "test 2\ncontinued")
         
-        XCTAssertNotNil(messages[2].event)
-        XCTAssertNotNil(messages[2].data)
-        XCTAssertEqual(messages[2].event!, "add")
-        XCTAssertEqual(messages[2].data!, "test 3")
+        #expect(messages[2].event != nil)
+        #expect(messages[2].data != nil)
+        #expect(messages[2].event! == "add")
+        #expect(messages[2].data! == "test 3")
         
-        XCTAssertNotNil(messages[3].event)
-        XCTAssertNotNil(messages[3].data)
-        XCTAssertEqual(messages[3].event!, "remove")
-        XCTAssertEqual(messages[3].data!, "test 4")
+        #expect(messages[3].event != nil)
+        #expect(messages[3].data != nil)
+        #expect(messages[3].event! == "remove")
+        #expect(messages[3].data! == "test 4")
         
-        XCTAssertNotNil(messages[4].id)
-        XCTAssertNotNil(messages[4].event)
-        XCTAssertNotNil(messages[4].data)
-        XCTAssertEqual(messages[4].id!, "5")
-        XCTAssertEqual(messages[4].event!, "ping")
-        XCTAssertEqual(messages[4].data!, "test 5")
+        #expect(messages[4].id != nil)
+        #expect(messages[4].event != nil)
+        #expect(messages[4].data != nil)
+        #expect(messages[4].id! == "5")
+        #expect(messages[4].event! == "ping")
+        #expect(messages[4].data! == "test 5")
     }
     
-    func testEmptyData() {
+    @Test func emptyData() {
         let parser = EventParser.live
         
         let text = """
@@ -67,10 +68,10 @@ final class EventParserTests: XCTestCase {
         
         let messages = parser.parse(data)
         
-        XCTAssertTrue(messages.isEmpty)
+        #expect(messages.isEmpty)
     }
     
-    func testOtherMessageFormats() {
+    @Test func otherMessageFormats() {
         let parser = EventParser.live
         
         let text = """
@@ -95,35 +96,35 @@ final class EventParserTests: XCTestCase {
                 
         let messages = parser.parse(data)
         
-        XCTAssertNotNil(messages[0].data)
-        XCTAssertEqual(messages[0].data!, "test 1")
+        #expect(messages[0].data != nil)
+        #expect(messages[0].data! == "test 1")
         
-        XCTAssertNotNil(messages[1].id)
-        XCTAssertNotNil(messages[1].data)
-        XCTAssertEqual(messages[1].id!, "2")
-        XCTAssertEqual(messages[1].data!, "test 2")
+        #expect(messages[1].id != nil)
+        #expect(messages[1].data != nil)
+        #expect(messages[1].id! == "2")
+        #expect(messages[1].data! == "test 2")
         
-        XCTAssertNotNil(messages[2].event)
-        XCTAssertNotNil(messages[2].data)
-        XCTAssertEqual(messages[2].event!, "add")
-        XCTAssertEqual(messages[2].data!, "test 3")
+        #expect(messages[2].event != nil)
+        #expect(messages[2].data != nil)
+        #expect(messages[2].event! == "add")
+        #expect(messages[2].data! == "test 3")
         
-        XCTAssertNotNil(messages[3].id)
-        XCTAssertNotNil(messages[3].event)
-        XCTAssertNotNil(messages[3].data)
-        XCTAssertEqual(messages[3].id!, "4")
-        XCTAssertEqual(messages[3].event!, "ping")
-        XCTAssertEqual(messages[3].data!, "test 4")
+        #expect(messages[3].id != nil)
+        #expect(messages[3].event != nil)
+        #expect(messages[3].data != nil)
+        #expect(messages[3].id! == "4")
+        #expect(messages[3].event! == "ping")
+        #expect(messages[3].data! == "test 4")
         
-        XCTAssertNotNil(messages[4].other)
-        XCTAssertEqual(messages[4].other!["test 5"], "")
+        #expect(messages[4].other != nil)
+        #expect(messages[4].other!["test 5"] == "")
         
-        XCTAssertNotNil(messages[5].other)
-        XCTAssertEqual(messages[5].other!["message 6"], "")
-        XCTAssertEqual(messages[5].other!["message 6-1"], "")
+        #expect(messages[5].other != nil)
+        #expect(messages[5].other!["message 6"] == "")
+        #expect(messages[5].other!["message 6-1"] == "")
     }
     
-    func testJSONData() {
+    @Test func jsonData() {
         let parser = EventParser.live
         let jsonDecoder = JSONDecoder()
         
@@ -138,14 +139,14 @@ final class EventParserTests: XCTestCase {
         
         let messages = parser.parse(data)
         
-        XCTAssertNotNil(messages[0].data)
-        XCTAssertNotNil(messages[1].data)
+        #expect(messages[0].data != nil)
+        #expect(messages[1].data != nil)
         
         do {
-            let decoded1 = try jsonDecoder.decode(TestModel.self, from: Data(messages[0].data!.utf8))
-            let decoded2 = try jsonDecoder.decode(TestModel.self, from: Data(messages[1].data!.utf8))
+            let _ = try jsonDecoder.decode(TestModel.self, from: Data(messages[0].data!.utf8))
+            let _ = try jsonDecoder.decode(TestModel.self, from: Data(messages[1].data!.utf8))
         } catch {
-            XCTFail("The JSON strings provided in the test data were parsed incorrectly.")
+            Issue.record("The JSON strings provided in the test data were parsed incorrectly.")
         }
     }
 }
