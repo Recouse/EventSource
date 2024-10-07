@@ -1,5 +1,5 @@
 //
-//  ServerMessage.swift
+//  ServerEvent.swift
 //  EventSource
 //
 //  Copyright © 2023 Firdavs Khaydarov (Recouse). All rights reserved.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct ServerMessage {
+public struct ServerEvent {
     public var id: String?
     public var event: String?
     public var data: String?
@@ -53,18 +53,18 @@ public struct ServerMessage {
         return true
     }
     
-    public static func parse(from data: Data) -> ServerMessage? {
-        let rows = data.split(separator: MessageParser.lf) // Separate message fields
+    public static func parse(from data: Data) -> ServerEvent? {
+        let rows = data.split(separator: EventParser.lf) // Separate message fields
         
-        var message = ServerMessage()
+        var message = ServerEvent()
         
         for row in rows {
             // Skip the line if it is empty or it starts with a colon character
-            if row.isEmpty, row.first == MessageParser.colon {
+            if row.isEmpty, row.first == EventParser.colon {
                 continue
             }
             
-            let keyValue = row.split(separator: MessageParser.colon, maxSplits: 1)
+            let keyValue = row.split(separator: EventParser.colon, maxSplits: 1)
             let key = keyValue[0].utf8String.trimmingCharacters(in: .whitespaces)
             let value = keyValue[safe: 1]?.utf8String.trimmingCharacters(in: .whitespaces)
             
@@ -85,7 +85,7 @@ public struct ServerMessage {
                 // If the line is not empty but does not contain a color character
                 // add it to the other fields using the whole line as the field name,
                 // and the empty string as the field value.
-                if row.contains(MessageParser.colon) == false {
+                if row.contains(EventParser.colon) == false {
                     let string = row.utf8String
                     if var other = message.other {
                         other[string] = ""
