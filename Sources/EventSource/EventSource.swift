@@ -21,7 +21,7 @@ import Foundation
 /// which sends events in `text/event-stream` format.
 /// The connection remains open until closed by calling `close()`.
 ///
-public struct EventSource {
+public struct EventSource: Sendable {
     /// State of the connection.
     public enum ReadyState: Int {
         case none = -1
@@ -101,7 +101,7 @@ public extension EventSource {
             configuration.timeoutIntervalForResource = self.timeoutInterval
             return configuration
         }
-                
+
         internal init(
             urlRequest: URLRequest,
             eventParser: EventParser,
@@ -111,7 +111,7 @@ public extension EventSource {
             self.eventParser = eventParser
             self.timeoutInterval = timeoutInterval
         }
-        
+
         /// Creates and returns event stream.
         public func events() -> AsyncStream<EventType> {
             AsyncStream { continuation in
