@@ -84,17 +84,17 @@ public struct ServerEvent: EVEvent {
             
             switch key {
             case "id":
-                message.id = value?.trimmingCharacters(in: .whitespaces)
+                message.id = value
             case "event":
-                message.event = value?.trimmingCharacters(in: .whitespaces)
+                message.event = value
             case "data":
                 if let existingData = message.data {
-                    message.data = existingData + "\n" + (value?.trimmingCharacters(in: .whitespaces) ?? "")
+                    message.data = existingData + "\n" + (value ?? "")
                 } else {
-                    message.data = value?.trimmingCharacters(in: .whitespaces)
+                    message.data = value
                 }
             case "time":
-                message.time = value?.trimmingCharacters(in: .whitespaces)
+                message.time = value
             default:
                 // If the line is not empty but does not contain a color character
                 // add it to the other fields using the whole line as the field name,

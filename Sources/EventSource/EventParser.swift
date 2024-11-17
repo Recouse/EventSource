@@ -16,7 +16,7 @@ public struct EventParser: Sendable {
 public extension EventParser {
     static let lf: UInt8 = 0x0A
     static let colon: UInt8 = 0x3A
-    
+
     static let live = Self(parse: { data in
         // Split message with double newline
         let rawMessages: [Data]
