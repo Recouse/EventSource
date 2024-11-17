@@ -8,7 +8,45 @@
 
 import Foundation
 
-public struct ServerEvent {
+/// Protocol for defining a basic event structure. It is used by the ``EventParser``
+/// and should be implemented as a custom type when a custom ``EventParser`` is required.
+public protocol EVEvent {
+    var id: String? { get }
+    var event: String? { get }
+    var data: String? { get }
+    var other: [String: String]? { get }
+    var time: String? { get }
+}
+
+public extension EVEvent {
+    /// Checks if all event fields are empty.
+    var isEmpty: Bool {
+        if let id, !id.isEmpty {
+            return false
+        }
+
+        if let event, !event.isEmpty {
+            return false
+        }
+
+        if let data, !data.isEmpty {
+            return false
+        }
+
+        if let other, !other.isEmpty {
+            return false
+        }
+
+        if let time, !time.isEmpty {
+            return false
+        }
+
+        return true
+    }
+}
+
+/// Default implementation of ``EventSourceEvent`` used in the package.
+public struct ServerEvent: EVEvent {
     public var id: String?
     public var event: String?
     public var data: String?
@@ -27,30 +65,6 @@ public struct ServerEvent {
         self.data = data
         self.other = other
         self.time = time
-    }
-    
-    private func isEmpty() -> Bool {
-        if let id, !id.isEmpty {
-            return false
-        }
-        
-        if let event, !event.isEmpty {
-            return false
-        }
-        
-        if let data, !data.isEmpty {
-            return false
-        }
-        
-        if let other, !other.isEmpty {
-            return false
-        }
-        
-        if let time, !time.isEmpty {
-            return false
-        }
-        
-        return true
     }
     
     public static func parse(from data: Data) -> ServerEvent? {
@@ -97,7 +111,7 @@ public struct ServerEvent {
             }
         }
         
-        if message.isEmpty() {
+        if message.isEmpty {
             return nil
         }
         

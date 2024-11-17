@@ -28,7 +28,7 @@ public struct EventSource {
     /// Event type.
     public enum EventType {
         case error(Error)
-        case event(ServerEvent)
+        case event(EVEvent)
         case open
         case closed
     }
