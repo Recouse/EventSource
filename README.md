@@ -65,8 +65,8 @@ for await event in dataTask.events() {
         print("Connection was opened.")
     case .error(let error):
         print("Received an error:", error.localizedDescription)
-    case .message(let message):
-        print("Received a message", message.data ?? "")
+    case .event(let event):
+        print("Received an event", event.data ?? "")
     case .closed:
         print("Connection was closed.")
     }
