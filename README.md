@@ -57,9 +57,9 @@ Using EventSource is easy. Simply create a new task from an instance of EventSou
 import EventSource
 
 let eventSource = EventSource()
-let dataTask = eventSource.dataTask(for: urlRequest)
+let dataTask = await eventSource.dataTask(for: urlRequest)
 
-for await event in dataTask.events() {
+for await event in await dataTask.events() {
     switch event {
     case .open:
         print("Connection was opened.")

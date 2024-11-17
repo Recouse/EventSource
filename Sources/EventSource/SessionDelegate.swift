@@ -12,29 +12,31 @@ import Foundation
 #endif
 
 final class SessionDelegate: NSObject, URLSessionDataDelegate {
-    enum Event {
+    enum Event: Sendable {
         case didCompleteWithError(Error?)
-        case didReceiveResponse(URLResponse, (URLSession.ResponseDisposition) -> Void)
+        case didReceiveResponse(URLResponse, @Sendable (URLSession.ResponseDisposition) -> Void)
         case didReceiveData(Data)
     }
-    
-    var onEvent: (Event) -> Void = { _ in }
-    
+
+    private let internalStream = AsyncStream<Event>.makeStream()
+
+    var eventStream: AsyncStream<Event> { internalStream.stream }
+
     func urlSession(
         _ session: URLSession,
         task: URLSessionTask,
         didCompleteWithError error: Error?
     ) {
-        onEvent(.didCompleteWithError(error))
+        internalStream.continuation.yield(.didCompleteWithError(error))
     }
     
     func urlSession(
         _ session: URLSession,
         dataTask: URLSessionDataTask,
         didReceive response: URLResponse,
-        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+        completionHandler: @Sendable @escaping (URLSession.ResponseDisposition) -> Void
     ) {
-        onEvent(.didReceiveResponse(response, completionHandler))
+        internalStream.continuation.yield(.didReceiveResponse(response, completionHandler))
     }
     
     func urlSession(
@@ -42,6 +44,6 @@ final class SessionDelegate: NSObject, URLSessionDataDelegate {
         dataTask: URLSessionDataTask,
         didReceive data: Data
     ) {
-        onEvent(.didReceiveData(data))
+        internalStream.continuation.yield(.didReceiveData(data))
     }
 }

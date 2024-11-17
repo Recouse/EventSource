@@ -10,7 +10,7 @@ import Foundation
 
 /// Protocol for defining a basic event structure. It is used by the ``EventParser``
 /// and should be implemented as a custom type when a custom ``EventParser`` is required.
-public protocol EVEvent {
+public protocol EVEvent: Sendable {
     var id: String? { get }
     var event: String? { get }
     var data: String? { get }
