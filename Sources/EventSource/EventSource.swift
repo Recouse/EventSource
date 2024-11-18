@@ -114,7 +114,14 @@ public extension EventSource {
 
         /// Creates and returns event stream.
         public func events() -> AsyncStream<EventType> {
-            AsyncStream { continuation in
+            if urlSessionDataTask != nil {
+                return AsyncStream { continuation in
+                    continuation.yield(.error(EventSourceError.alreadyConsumed))
+                    continuation.finish()
+                }
+            }
+
+            return AsyncStream { continuation in
                 let sessionDelegate = SessionDelegate()
                 let sesstionDelegateTask = Task { [weak self] in
                     for await event in sessionDelegate.eventStream {
