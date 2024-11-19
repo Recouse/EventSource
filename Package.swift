@@ -17,7 +17,8 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "EventSource"),
+            name: "EventSource",
+            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]),
         .testTarget(
             name: "EventSourceTests",
             dependencies: ["EventSource"]),

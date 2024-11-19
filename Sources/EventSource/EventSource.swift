@@ -11,12 +11,22 @@ import Foundation
     import FoundationNetworking
 #endif
 
+/// The global actor used for isolating ``EventSource/EventSource/DataTask``.
+@globalActor public actor EventSourceActor: GlobalActor {
+    public static let shared = EventSourceActor()
+}
+
 ///
 /// An `EventSource` instance opens a persistent connection to an HTTP server,
 /// which sends events in `text/event-stream` format.
 /// The connection remains open until closed by calling `close()`.
 ///
-public struct EventSource {
+public struct EventSource: Sendable {
+    public enum Mode: Sendable {
+        case `default`
+        case dataOnly
+    }
+
     /// State of the connection.
     public enum ReadyState: Int {
         case none = -1
@@ -26,60 +36,73 @@ public struct EventSource {
     }
     
     /// Event type.
-    public enum EventType {
+    public enum EventType: Sendable {
         case error(Error)
-        case message(ServerMessage)
+        case event(EVEvent)
         case open
         case closed
     }
-    
-    private let messageParser: MessageParser
+
+    private let mode: Mode
+
+    private let eventParser: EventParser
     
     public var timeoutInterval: TimeInterval
     
     public init(
-        messageParser: MessageParser = .live,
+        mode: Mode = .default,
+        eventParser: EventParser? = nil,
         timeoutInterval: TimeInterval = 300
     ) {
-        self.messageParser = messageParser
+        self.mode = mode
+        if let eventParser {
+            self.eventParser = eventParser
+        } else {
+            self.eventParser = ServerEventParser(mode: mode)
+        }
         self.timeoutInterval = timeoutInterval
     }
-    
+
+    @EventSourceActor
     public func dataTask(for urlRequest: URLRequest) -> DataTask {
         DataTask(
             urlRequest: urlRequest,
-            messageParser: messageParser,
+            eventParser: eventParser,
             timeoutInterval: timeoutInterval
         )
     }
 }
 
 public extension EventSource {
-    class DataTask {
-        /// A number representing the state of the connection.
+    /// An EventSource task that handles connecting to the URLRequest and creating an event stream.
+    ///
+    /// Creation of a task is exclusively handled by ``EventSource``. A new task can be created by calling
+    /// ``EventSource/EventSource/dataTask(for:)`` method on the EventSource instance. After creating a task,
+    /// it can be started by iterating event stream returned by ``DataTask/events()``.
+    @EventSourceActor final class DataTask {
+        /// A value representing the state of the connection.
         public private(set) var readyState: ReadyState = .none
-        
+
+        /// Last event's ID string value.
+        ///
+        /// Sent in a HTTP request header and used when a user is to reestablish the connection.
         public private(set) var lastMessageId: String = ""
-        
-        /// A string representing the URL of the source.
+
+        /// A URLRequest of the events source.
         public let urlRequest: URLRequest
-        
-        private let messageParser: MessageParser
-        
+
+        private let eventParser: EventParser
+
         private let timeoutInterval: TimeInterval
-        
+
         private var continuation: AsyncStream<EventType>.Continuation?
-        
+
         private var urlSession: URLSession?
-        
-        private var sessionDelegate = SessionDelegate()
-        
-        private var sessionDelegateTask: Task<Void, Error>?
-        
+
         private var urlSessionDataTask: URLSessionDataTask?
-                        
+
         private var httpResponseErrorStatusCode: Int?
-        
+
         private var urlSessionConfiguration: URLSessionConfiguration {
             let configuration = URLSessionConfiguration.default
             configuration.httpAdditionalHeaders = [
@@ -91,50 +114,63 @@ public extension EventSource {
             configuration.timeoutIntervalForResource = self.timeoutInterval
             return configuration
         }
-                
+
         internal init(
             urlRequest: URLRequest,
-            messageParser: MessageParser,
+            eventParser: EventParser,
             timeoutInterval: TimeInterval
         ) {
             self.urlRequest = urlRequest
-            self.messageParser = messageParser
+            self.eventParser = eventParser
             self.timeoutInterval = timeoutInterval
         }
-        
+
+        /// Creates and returns event stream.
         public func events() -> AsyncStream<EventType> {
-            AsyncStream { continuation in
-                continuation.onTermination = { @Sendable [weak self] _ in
-                    self?.close()
+            if urlSessionDataTask != nil {
+                return AsyncStream { continuation in
+                    continuation.yield(.error(EventSourceError.alreadyConsumed))
+                    continuation.finish()
                 }
-                
+            }
+
+            return AsyncStream { continuation in
+                let sessionDelegate = SessionDelegate()
+                let sesstionDelegateTask = Task { [weak self] in
+                    for await event in sessionDelegate.eventStream {
+                        guard let self else { return }
+
+                        switch event {
+                        case let .didCompleteWithError(error):
+                            handleSessionError(error)
+                        case let .didReceiveResponse(response, completionHandler):
+                            handleSessionResponse(response, completionHandler: completionHandler)
+                        case let .didReceiveData(data):
+                            parseMessages(from: data)
+                        }
+                    }
+                }
+
+                continuation.onTermination = { @Sendable [weak self] _ in
+                    sesstionDelegateTask.cancel()
+                    Task { await self?.close() }
+                }
+
                 self.continuation = continuation
-                
+
+
                 urlSession = URLSession(
                     configuration: urlSessionConfiguration,
                     delegate: sessionDelegate,
                     delegateQueue: nil
                 )
-                
-                sessionDelegate.onEvent = { [weak self] event in
-                    guard let self else { return }
-                    
-                    switch event {
-                    case let .didCompleteWithError(error):
-                        handleSessionError(error)
-                    case let .didReceiveResponse(response, completionHandler):
-                        handleSessionResponse(response, completionHandler: completionHandler)
-                    case let .didReceiveData(data):
-                        parseMessages(from: data)
-                    }
-                }
-                
+
                 urlSessionDataTask = urlSession!.dataTask(with: urlRequest)
                 urlSessionDataTask!.resume()
                 readyState = .connecting
             }
         }
-        
+
         private func handleSessionError(_ error: Error?) {
             guard readyState != .closed else {
                 close()
@@ -149,7 +185,7 @@ public extension EventSource {
             // Close connection
             close()
         }
-        
+
         private func handleSessionResponse(
             _ response: URLResponse,
             completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
@@ -181,11 +217,11 @@ public extension EventSource {
             
             completionHandler(.allow)
         }
-        
+
         /// Closes the connection, if one was made,
         /// and sets the `readyState` property to `.closed`.
         /// - Returns: State before closing.
-        @Sendable private func close() {
+        private func close() {
             let previousState = self.readyState
             if previousState != .closed {
                 continuation?.yield(.closed)
@@ -193,7 +229,7 @@ public extension EventSource {
             }
             cancel()
         }
-        
+
         private func parseMessages(from data: Data) {
             if let httpResponseErrorStatusCode {
                 self.httpResponseErrorStatusCode = nil
@@ -203,15 +239,15 @@ public extension EventSource {
                 return
             }
             
-            let messages = messageParser.parse(data)
-            
+            let events = eventParser.parse(data)
+
             // Update last message ID
-            if let lastMessageWithId = messages.last(where: { $0.id != nil }) {
+            if let lastMessageWithId = events.last(where: { $0.id != nil }) {
                 lastMessageId = lastMessageWithId.id ?? ""
             }
             
-            messages.forEach {
-                continuation?.yield(.message($0))
+            events.forEach {
+                continuation?.yield(.event($0))
             }
         }
         
@@ -219,15 +255,20 @@ public extension EventSource {
             readyState = .open
             continuation?.yield(.open)
         }
-        
+
         private func sendErrorEvent(with error: Error) {
             continuation?.yield(.error(error))
         }
-        
+
+        /// Cancels the task.
+        ///
+        /// ## Notes:
+        /// The event stream supports cooperative task cancellation. However, it should be noted that
+        /// canceling the parent Task only cancels the underlying `URLSessionDataTask` of
+        /// ``EventSource/EventSource/DataTask``; this does not actually stop the ongoing request.
         public func cancel() {
             readyState = .closed
             lastMessageId = ""
-            sessionDelegateTask?.cancel()
             urlSessionDataTask?.cancel()
             urlSession?.invalidateAndCancel()
         }
