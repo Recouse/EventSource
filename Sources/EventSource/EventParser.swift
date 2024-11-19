@@ -8,16 +8,22 @@
 
 import Foundation
 
-/// Event parser is used to parse text data into ``ServerEvent``.
-public struct EventParser: Sendable {
-    public var parse: @Sendable (_ data: Data) -> [EVEvent]
+public protocol EventParser: Sendable {
+    func parse(_ data: Data) -> [EVEvent]
 }
 
-public extension EventParser {
+/// ``ServerEventParser`` is used to parse text data into ``ServerEvent``.
+public struct ServerEventParser: EventParser {
+    let mode: EventSource.Mode
+
+    init(mode: EventSource.Mode = .default) {
+        self.mode = mode
+    }
+
     static let lf: UInt8 = 0x0A
     static let colon: UInt8 = 0x3A
 
-    static let live = Self(parse: { data in
+    public func parse(_ data: Data) -> [EVEvent] {
         // Split message with double newline
         let rawMessages: [Data]
         if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
@@ -25,12 +31,12 @@ public extension EventParser {
         } else {
             rawMessages = data.split(by: [Self.lf, Self.lf])
         }
-        
+
         // Parse data to ServerMessage model
-        let messages: [ServerEvent] = rawMessages.compactMap(ServerEvent.parse(from:))
-        
+        let messages: [ServerEvent] = rawMessages.compactMap { ServerEvent.parse(from: $0, mode: mode) }
+
         return messages
-    })
+    }
 }
 
 fileprivate extension Data {

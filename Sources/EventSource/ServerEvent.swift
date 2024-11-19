@@ -67,18 +67,23 @@ public struct ServerEvent: EVEvent {
         self.time = time
     }
     
-    public static func parse(from data: Data) -> ServerEvent? {
-        let rows = data.split(separator: EventParser.lf) // Separate message fields
-        
+    public static func parse(from data: Data, mode: EventSource.Mode = .default) -> ServerEvent? {
+        let rows: [Data] = switch mode {
+        case .default:
+            data.split(separator: ServerEventParser.lf) // Separate event fields
+        case .dataOnly:
+            [data] // Do not split data in data-only mode
+        }
+
         var message = ServerEvent()
         
         for row in rows {
             // Skip the line if it is empty or it starts with a colon character
-            if row.isEmpty, row.first == EventParser.colon {
+            if row.isEmpty, row.first == ServerEventParser.colon {
                 continue
             }
             
-            let keyValue = row.split(separator: EventParser.colon, maxSplits: 1)
+            let keyValue = row.split(separator: ServerEventParser.colon, maxSplits: 1)
             let key = keyValue[0].utf8String.trimmingCharacters(in: .whitespaces)
             let value = keyValue[safe: 1]?.utf8String.trimmingCharacters(in: .whitespaces)
             
@@ -96,10 +101,10 @@ public struct ServerEvent: EVEvent {
             case "time":
                 message.time = value
             default:
-                // If the line is not empty but does not contain a color character
+                // If the line is not empty but does not contain a colon character
                 // add it to the other fields using the whole line as the field name,
                 // and the empty string as the field value.
-                if row.contains(EventParser.colon) == false {
+                if row.contains(ServerEventParser.colon) == false {
                     let string = row.utf8String
                     if var other = message.other {
                         other[string] = ""

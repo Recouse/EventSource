@@ -22,6 +22,11 @@ import Foundation
 /// The connection remains open until closed by calling `close()`.
 ///
 public struct EventSource: Sendable {
+    public enum Mode: Sendable {
+        case `default`
+        case dataOnly
+    }
+
     /// State of the connection.
     public enum ReadyState: Int {
         case none = -1
@@ -37,16 +42,24 @@ public struct EventSource: Sendable {
         case open
         case closed
     }
-    
+
+    private let mode: Mode
+
     private let eventParser: EventParser
     
     public var timeoutInterval: TimeInterval
     
     public init(
-        eventParser: EventParser = .live,
+        mode: Mode = .default,
+        eventParser: EventParser? = nil,
         timeoutInterval: TimeInterval = 300
     ) {
-        self.eventParser = eventParser
+        self.mode = mode
+        if let eventParser {
+            self.eventParser = eventParser
+        } else {
+            self.eventParser = ServerEventParser(mode: mode)
+        }
         self.timeoutInterval = timeoutInterval
     }
 
@@ -69,27 +82,27 @@ public extension EventSource {
     @EventSourceActor final class DataTask {
         /// A value representing the state of the connection.
         public private(set) var readyState: ReadyState = .none
-        
+
         /// Last event's ID string value.
         ///
         /// Sent in a HTTP request header and used when a user is to reestablish the connection.
         public private(set) var lastMessageId: String = ""
-        
+
         /// A URLRequest of the events source.
         public let urlRequest: URLRequest
-        
+
         private let eventParser: EventParser
-        
+
         private let timeoutInterval: TimeInterval
-        
+
         private var continuation: AsyncStream<EventType>.Continuation?
-        
+
         private var urlSession: URLSession?
 
         private var urlSessionDataTask: URLSessionDataTask?
-                        
+
         private var httpResponseErrorStatusCode: Int?
-        
+
         private var urlSessionConfiguration: URLSessionConfiguration {
             let configuration = URLSessionConfiguration.default
             configuration.httpAdditionalHeaders = [
@@ -157,7 +170,7 @@ public extension EventSource {
                 readyState = .connecting
             }
         }
-        
+
         private func handleSessionError(_ error: Error?) {
             guard readyState != .closed else {
                 close()
@@ -172,7 +185,7 @@ public extension EventSource {
             // Close connection
             close()
         }
-        
+
         private func handleSessionResponse(
             _ response: URLResponse,
             completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
@@ -204,7 +217,7 @@ public extension EventSource {
             
             completionHandler(.allow)
         }
-        
+
         /// Closes the connection, if one was made,
         /// and sets the `readyState` property to `.closed`.
         /// - Returns: State before closing.
@@ -216,7 +229,7 @@ public extension EventSource {
             }
             cancel()
         }
-        
+
         private func parseMessages(from data: Data) {
             if let httpResponseErrorStatusCode {
                 self.httpResponseErrorStatusCode = nil
@@ -227,7 +240,7 @@ public extension EventSource {
             }
             
             let events = eventParser.parse(data)
-            
+
             // Update last message ID
             if let lastMessageWithId = events.last(where: { $0.id != nil }) {
                 lastMessageId = lastMessageWithId.id ?? ""
@@ -242,11 +255,11 @@ public extension EventSource {
             readyState = .open
             continuation?.yield(.open)
         }
-        
+
         private func sendErrorEvent(with error: Error) {
             continuation?.yield(.error(error))
         }
-        
+
         /// Cancels the task.
         ///
         /// ## Notes:

@@ -9,7 +9,7 @@ import Testing
 
 struct EventParserTests {
     @Test func messagesParsing() throws {
-        let parser = EventParser.live
+        let parser = ServerEventParser()
         
         let text = """
         data: test 1
@@ -30,7 +30,7 @@ struct EventParserTests {
         let data = Data(text.utf8)
         
         let messages = parser.parse(data)
-        
+
         #expect(messages.count == 5)
         
         #expect(messages[0].data != nil)
@@ -58,8 +58,8 @@ struct EventParserTests {
     }
     
     @Test func emptyData() {
-        let parser = EventParser.live
-        
+        let parser = ServerEventParser()
+
         let text = """
         
         
@@ -67,13 +67,13 @@ struct EventParserTests {
         let data = Data(text.utf8)
         
         let messages = parser.parse(data)
-        
+
         #expect(messages.isEmpty)
     }
     
     @Test func otherMessageFormats() {
-        let parser = EventParser.live
-        
+        let parser = ServerEventParser()
+
         let text = """
         data : test 1
 
@@ -123,31 +123,29 @@ struct EventParserTests {
         #expect(messages[5].other!["message 6"] == "")
         #expect(messages[5].other!["message 6-1"] == "")
     }
-    
-    @Test func jsonData() {
-        let parser = EventParser.live
-        let jsonDecoder = JSONDecoder()
-        
-        let text = """
-        data: {\"id\":\"abcd-1\",\"type\":\"message\",\"content\":\"\\ntest\\n\"}
 
-        id: abcd-2
-        data: {\"id\":\"abcd-2\",\"type\":\"message\",\"content\":\"\\n\\n"}
+    @Test func dataOnlyMode() throws {
+        let parser = ServerEventParser(mode: .dataOnly)
+        let jsonDecoder = JSONDecoder()
+
+        let text = """
+        data: {"id":"abcd-1","type":"message","content":"\\ntest\\n"}
+
+        data: {"id":"abcd-2","type":"message","content":"\\n\\n"}
         
         """
         let data = Data(text.utf8)
-        
+
         let messages = parser.parse(data)
-        
-        #expect(messages[0].data != nil)
-        #expect(messages[1].data != nil)
-        
-        do {
-            let _ = try jsonDecoder.decode(TestModel.self, from: Data(messages[0].data!.utf8))
-            let _ = try jsonDecoder.decode(TestModel.self, from: Data(messages[1].data!.utf8))
-        } catch {
-            Issue.record("The JSON strings provided in the test data were parsed incorrectly.")
-        }
+
+        let data1 = Data(try #require(messages[0].data?.utf8))
+        let data2 = Data(try #require(messages[1].data?.utf8))
+
+        let message1 = try jsonDecoder.decode(TestModel.self, from: data1)
+        let message2 = try jsonDecoder.decode(TestModel.self, from: data2)
+
+        #expect(message1.content == "\ntest\n")
+        #expect(message2.content == "\n\n")
     }
 }
 
