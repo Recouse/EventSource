@@ -136,7 +136,7 @@ public extension EventSource {
 
             return AsyncStream { continuation in
                 let sessionDelegate = SessionDelegate()
-                let sesstionDelegateTask = Task { [weak self] in
+                let sessionDelegateTask = Task { [weak self] in
                     for await event in sessionDelegate.eventStream {
                         guard let self else { return }
 
@@ -153,12 +153,12 @@ public extension EventSource {
 
                 #if compiler(>=6.0)
                 continuation.onTermination = { @Sendable [weak self] _ in
-                    sesstionDelegateTask.cancel()
+                    sessionDelegateTask.cancel()
                     Task { await self?.close() }
                 }
                 #else
                 continuation.onTermination = { @Sendable _ in
-                    sesstionDelegateTask.cancel()
+                    sessionDelegateTask.cancel()
                     Task { [weak self] in
                         await self?.close()
                     }
