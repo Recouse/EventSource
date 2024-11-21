@@ -151,10 +151,19 @@ public extension EventSource {
                     }
                 }
 
+                #if compiler(>=6.0)
                 continuation.onTermination = { @Sendable [weak self] _ in
                     sesstionDelegateTask.cancel()
                     Task { await self?.close() }
                 }
+                #else
+                continuation.onTermination = { @Sendable _ in
+                    sesstionDelegateTask.cancel()
+                    Task { [weak self] in
+                        await self?.close()
+                    }
+                }
+                #endif
 
                 self.continuation = continuation
 
