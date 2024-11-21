@@ -1,4 +1,4 @@
-name: EventSource CI
+name: CI
 
 on:
   push:
