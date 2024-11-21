@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  macos-14:
+    name: Build macOS 14 (Swift 5.10)
+    runs-on: macos-14
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Build
+      run: swift build -v
+  macos-15:
+    name: Build macOS 15 (Swift 6.0)
+    runs-on: macos-15
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Build
+      run: swift build -v
+    - name: Run tests
+      run: swift test -v
+  ubuntu:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    container:
+      image: swift:latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: swift build -v
+    - name: Run tests
+      run: swift test -v
