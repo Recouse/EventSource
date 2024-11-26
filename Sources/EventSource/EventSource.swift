@@ -28,7 +28,7 @@ public struct EventSource: Sendable {
     }
 
     /// State of the connection.
-    public enum ReadyState: Int {
+    public enum ReadyState: Int, Sendable {
         case none = -1
         case connecting = 0
         case open = 1
