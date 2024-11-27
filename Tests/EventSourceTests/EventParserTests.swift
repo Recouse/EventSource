@@ -152,6 +152,45 @@ struct EventParserTests {
         #expect(message1.content == "\ntest\n")
         #expect(message2.content == "\n\n")
     }
+
+    @Test func parseNotCompleteMessage() async throws {
+        let parser = ServerEventParser()
+
+        let text = """
+        data: test 1
+        """
+        let data = Data(text.utf8)
+
+        let messages = await parser.parse(data)
+
+        #expect(messages.count == 0)
+    }
+
+    @Test func parseSeparatedMessage() async throws {
+        let parser = ServerEventParser()
+
+        let textPart1 = """
+        event: add
+        
+        """
+        let dataPart1 = Data(textPart1.utf8)
+        let textPart2 = """
+        data: test 1
+        
+        
+        """
+        let dataPart2 = Data(textPart2.utf8)
+
+        let _ = await parser.parse(dataPart1)
+        let messages = await parser.parse(dataPart2)
+
+        #expect(messages.count == 1)
+
+        #expect(messages[0].event != nil)
+        #expect(messages[0].data != nil)
+        #expect(messages[0].event! == "add")
+        #expect(messages[0].data! == "test 1")
+    }
 }
 
 fileprivate extension EventParserTests {
