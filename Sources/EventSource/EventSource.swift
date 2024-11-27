@@ -146,7 +146,7 @@ public extension EventSource {
                         case let .didReceiveResponse(response, completionHandler):
                             handleSessionResponse(response, completionHandler: completionHandler)
                         case let .didReceiveData(data):
-                            parseMessages(from: data)
+                            await parseMessages(from: data)
                         }
                     }
                 }
@@ -239,7 +239,7 @@ public extension EventSource {
             cancel()
         }
 
-        private func parseMessages(from data: Data) {
+        private func parseMessages(from data: Data) async {
             if let httpResponseErrorStatusCode {
                 self.httpResponseErrorStatusCode = nil
                 handleSessionError(
@@ -248,7 +248,7 @@ public extension EventSource {
                 return
             }
             
-            let events = eventParser.parse(data)
+            let events = await eventParser.parse(data)
 
             // Update last message ID
             if let lastMessageWithId = events.last(where: { $0.id != nil }) {

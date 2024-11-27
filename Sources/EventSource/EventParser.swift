@@ -9,12 +9,13 @@
 import Foundation
 
 public protocol EventParser: Sendable {
-    func parse(_ data: Data) -> [EVEvent]
+    func parse(_ data: Data) async -> [EVEvent]
 }
 
 /// ``ServerEventParser`` is used to parse text data into ``ServerEvent``.
-public struct ServerEventParser: EventParser {
-    let mode: EventSource.Mode
+actor ServerEventParser: EventParser {
+    private let mode: EventSource.Mode
+    private var buffer = Data()
 
     init(mode: EventSource.Mode = .default) {
         self.mode = mode
@@ -23,19 +24,41 @@ public struct ServerEventParser: EventParser {
     static let lf: UInt8 = 0x0A
     static let colon: UInt8 = 0x3A
 
-    public func parse(_ data: Data) -> [EVEvent] {
-        // Split message with double newline
-        let rawMessages: [Data]
-        if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
-            rawMessages = data.split(separator: [Self.lf, Self.lf])
-        } else {
-            rawMessages = data.split(by: [Self.lf, Self.lf])
-        }
+    func parse(_ data: Data) -> [EVEvent] {
+        append(data: data)
+        return parseBuffer()
+    }
+
+    private func append(data: Data) {
+        buffer.append(data)
+    }
+
+    private func parseBuffer() -> [EVEvent] {
+        let rawMessages = splitBuffer()
 
         // Parse data to ServerMessage model
         let messages: [ServerEvent] = rawMessages.compactMap { ServerEvent.parse(from: $0, mode: mode) }
 
         return messages
+    }
+
+    private func splitBuffer() -> [Data] {
+        let separator: [UInt8] = [Self.lf, Self.lf]
+        var rawMessages = [Data]()
+
+        // If event separator is not present do not parse any unfinished messages
+        guard let lastSeparator = buffer.lastRange(of: separator) else { return [] }
+
+        let bufferRange = buffer.startIndex..<lastSeparator.upperBound
+
+        if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
+            rawMessages = buffer[bufferRange].split(separator: separator)
+        } else {
+            rawMessages = buffer[bufferRange].split(by: separator)
+        }
+
+        buffer.removeSubrange(bufferRange)
+        return rawMessages
     }
 }
 
