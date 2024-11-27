@@ -136,7 +136,7 @@ public extension EventSource {
 
             return AsyncStream { continuation in
                 let sessionDelegate = SessionDelegate()
-                let sesstionDelegateTask = Task { [weak self] in
+                let sessionDelegateTask = Task { [weak self] in
                     for await event in sessionDelegate.eventStream {
                         guard let self else { return }
 
@@ -146,19 +146,19 @@ public extension EventSource {
                         case let .didReceiveResponse(response, completionHandler):
                             handleSessionResponse(response, completionHandler: completionHandler)
                         case let .didReceiveData(data):
-                            parseMessages(from: data)
+                            await parseMessages(from: data)
                         }
                     }
                 }
 
                 #if compiler(>=6.0)
                 continuation.onTermination = { @Sendable [weak self] _ in
-                    sesstionDelegateTask.cancel()
+                    sessionDelegateTask.cancel()
                     Task { await self?.close() }
                 }
                 #else
                 continuation.onTermination = { @Sendable _ in
-                    sesstionDelegateTask.cancel()
+                    sessionDelegateTask.cancel()
                     Task { [weak self] in
                         await self?.close()
                     }
@@ -239,7 +239,7 @@ public extension EventSource {
             cancel()
         }
 
-        private func parseMessages(from data: Data) {
+        private func parseMessages(from data: Data) async {
             if let httpResponseErrorStatusCode {
                 self.httpResponseErrorStatusCode = nil
                 handleSessionError(
@@ -248,7 +248,7 @@ public extension EventSource {
                 return
             }
             
-            let events = eventParser.parse(data)
+            let events = await eventParser.parse(data)
 
             // Update last message ID
             if let lastMessageWithId = events.last(where: { $0.id != nil }) {
