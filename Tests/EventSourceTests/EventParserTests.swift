@@ -8,7 +8,7 @@ import Testing
 @testable import EventSource
 
 struct EventParserTests {
-    @Test func messagesParsing() throws {
+    @Test func messagesParsing() async throws {
         let parser = ServerEventParser()
         
         let text = """
@@ -26,10 +26,12 @@ struct EventParserTests {
         id: 5
         event: ping
         data: test 5
+        
+        
         """
         let data = Data(text.utf8)
         
-        let messages = parser.parse(data)
+        let messages = await parser.parse(data)
 
         #expect(messages.count == 5)
         
@@ -56,8 +58,8 @@ struct EventParserTests {
         #expect(messages[4].event! == "ping")
         #expect(messages[4].data! == "test 5")
     }
-    
-    @Test func emptyData() {
+
+    @Test func emptyData() async {
         let parser = ServerEventParser()
 
         let text = """
@@ -66,12 +68,12 @@ struct EventParserTests {
         """
         let data = Data(text.utf8)
         
-        let messages = parser.parse(data)
+        let messages = await parser.parse(data)
 
         #expect(messages.isEmpty)
     }
     
-    @Test func otherMessageFormats() {
+    @Test func otherMessageFormats() async {
         let parser = ServerEventParser()
 
         let text = """
@@ -91,10 +93,12 @@ struct EventParserTests {
         
         message 6
         message 6-1
+        
+        
         """
         let data = Data(text.utf8)
                 
-        let messages = parser.parse(data)
+        let messages = await parser.parse(data)
         
         #expect(messages[0].data != nil)
         #expect(messages[0].data! == "test 1")
@@ -124,7 +128,7 @@ struct EventParserTests {
         #expect(messages[5].other!["message 6-1"] == "")
     }
 
-    @Test func dataOnlyMode() throws {
+    @Test func dataOnlyMode() async throws {
         let parser = ServerEventParser(mode: .dataOnly)
         let jsonDecoder = JSONDecoder()
 
@@ -133,10 +137,11 @@ struct EventParserTests {
 
         data: {"id":"abcd-2","type":"message","content":"\\n\\n"}
         
+        
         """
         let data = Data(text.utf8)
 
-        let messages = parser.parse(data)
+        let messages = await parser.parse(data)
 
         let data1 = Data(try #require(messages[0].data?.utf8))
         let data2 = Data(try #require(messages[1].data?.utf8))
