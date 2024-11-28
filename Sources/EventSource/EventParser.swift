@@ -25,40 +25,35 @@ actor ServerEventParser: EventParser {
     static let colon: UInt8 = 0x3A
 
     func parse(_ data: Data) -> [EVEvent] {
-        append(data: data)
-        return parseBuffer()
+        let (separatedMessages, remainingData) = splitBuffer(for: buffer + data)
+        buffer = remainingData
+        return parseBuffer(for: separatedMessages)
     }
 
-    private func append(data: Data) {
-        buffer.append(data)
-    }
-
-    private func parseBuffer() -> [EVEvent] {
-        let rawMessages = splitBuffer()
-
+    private func parseBuffer(for rawMessages: [Data]) -> [EVEvent] {
         // Parse data to ServerMessage model
         let messages: [ServerEvent] = rawMessages.compactMap { ServerEvent.parse(from: $0, mode: mode) }
 
         return messages
     }
 
-    private func splitBuffer() -> [Data] {
+    private func splitBuffer(for data: Data) -> (completeData: [Data], remainingData: Data) {
         let separator: [UInt8] = [Self.lf, Self.lf]
         var rawMessages = [Data]()
 
         // If event separator is not present do not parse any unfinished messages
-        guard let lastSeparator = buffer.lastRange(of: separator) else { return [] }
+        guard let lastSeparator = data.lastRange(of: separator) else { return ([], data) }
 
-        let bufferRange = buffer.startIndex..<lastSeparator.upperBound
+        let bufferRange = data.startIndex..<lastSeparator.upperBound
+        let remainingRange = lastSeparator.upperBound..<data.endIndex
 
         if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
-            rawMessages = buffer[bufferRange].split(separator: separator)
+            rawMessages = data[bufferRange].split(separator: separator)
         } else {
-            rawMessages = buffer[bufferRange].split(by: separator)
+            rawMessages = data[bufferRange].split(by: separator)
         }
 
-        buffer.removeSubrange(bufferRange)
-        return rawMessages
+        return (rawMessages, data[remainingRange])
     }
 }
 
