@@ -44,7 +44,7 @@ actor ServerEventParser: EventParser {
         // If event separator is not present do not parse any unfinished messages
         guard let lastSeparator = data.lastRange(of: separator) else { return ([], data) }
 
-        let bufferRange = data.startIndex..<lastSeparator.upperBound
+        let bufferRange = data.startIndex..<lastSeparator.lowerBound
         let remainingRange = lastSeparator.upperBound..<data.endIndex
 
         if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
