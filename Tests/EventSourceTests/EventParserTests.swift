@@ -9,7 +9,7 @@ import Testing
 
 struct EventParserTests {
     @Test func messagesParsing() async throws {
-        let parser = ServerEventParser()
+        var parser = ServerEventParser()
         
         let text = """
         data: test 1
@@ -31,7 +31,7 @@ struct EventParserTests {
         """
         let data = Data(text.utf8)
         
-        let messages = await parser.parse(data)
+        let messages = parser.parse(data)
 
         #expect(messages.count == 5)
         
@@ -60,7 +60,7 @@ struct EventParserTests {
     }
 
     @Test func emptyData() async {
-        let parser = ServerEventParser()
+        var parser = ServerEventParser()
 
         let text = """
         
@@ -68,13 +68,13 @@ struct EventParserTests {
         """
         let data = Data(text.utf8)
         
-        let messages = await parser.parse(data)
+        let messages = parser.parse(data)
 
         #expect(messages.isEmpty)
     }
     
     @Test func otherMessageFormats() async {
-        let parser = ServerEventParser()
+        var parser = ServerEventParser()
 
         let text = """
         data : test 1
@@ -98,7 +98,7 @@ struct EventParserTests {
         """
         let data = Data(text.utf8)
                 
-        let messages = await parser.parse(data)
+        let messages = parser.parse(data)
         
         #expect(messages[0].data != nil)
         #expect(messages[0].data! == "test 1")
@@ -129,7 +129,7 @@ struct EventParserTests {
     }
 
     @Test func dataOnlyMode() async throws {
-        let parser = ServerEventParser(mode: .dataOnly)
+        var parser = ServerEventParser(mode: .dataOnly)
         let jsonDecoder = JSONDecoder()
 
         let text = """
@@ -141,7 +141,7 @@ struct EventParserTests {
         """
         let data = Data(text.utf8)
 
-        let messages = await parser.parse(data)
+        let messages = parser.parse(data)
 
         let data1 = Data(try #require(messages[0].data?.utf8))
         let data2 = Data(try #require(messages[1].data?.utf8))
@@ -154,20 +154,20 @@ struct EventParserTests {
     }
 
     @Test func parseNotCompleteMessage() async throws {
-        let parser = ServerEventParser()
+        var parser = ServerEventParser()
 
         let text = """
         data: test 1
         """
         let data = Data(text.utf8)
 
-        let messages = await parser.parse(data)
+        let messages = parser.parse(data)
 
         #expect(messages.count == 0)
     }
 
     @Test func parseSeparatedMessage() async throws {
-        let parser = ServerEventParser()
+        var parser = ServerEventParser()
 
         let textPart1 = """
         event: add
@@ -181,8 +181,8 @@ struct EventParserTests {
         """
         let dataPart2 = Data(textPart2.utf8)
 
-        let _ = await parser.parse(dataPart1)
-        let messages = await parser.parse(dataPart2)
+        let _ = parser.parse(dataPart1)
+        let messages = parser.parse(dataPart2)
 
         #expect(messages.count == 1)
 
