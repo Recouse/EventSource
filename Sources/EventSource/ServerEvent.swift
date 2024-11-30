@@ -130,7 +130,7 @@ fileprivate extension Data {
     }
 }
 
-fileprivate extension Array {
+package extension Array {
     subscript(safe index: Int) -> Element? {
         guard index >= 0, index < endIndex else {
             return nil
