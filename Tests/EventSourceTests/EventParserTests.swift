@@ -8,8 +8,8 @@ import Testing
 @testable import EventSource
 
 struct EventParserTests {
-    @Test func messagesParsing() throws {
-        let parser = ServerEventParser()
+    @Test func messagesParsing() async throws {
+        var parser = ServerEventParser()
         
         let text = """
         data: test 1
@@ -26,6 +26,8 @@ struct EventParserTests {
         id: 5
         event: ping
         data: test 5
+        
+        
         """
         let data = Data(text.utf8)
         
@@ -56,9 +58,9 @@ struct EventParserTests {
         #expect(messages[4].event! == "ping")
         #expect(messages[4].data! == "test 5")
     }
-    
-    @Test func emptyData() {
-        let parser = ServerEventParser()
+
+    @Test func emptyData() async {
+        var parser = ServerEventParser()
 
         let text = """
         
@@ -71,8 +73,8 @@ struct EventParserTests {
         #expect(messages.isEmpty)
     }
     
-    @Test func otherMessageFormats() {
-        let parser = ServerEventParser()
+    @Test func otherMessageFormats() async {
+        var parser = ServerEventParser()
 
         let text = """
         data : test 1
@@ -91,6 +93,8 @@ struct EventParserTests {
         
         message 6
         message 6-1
+        
+        
         """
         let data = Data(text.utf8)
                 
@@ -124,14 +128,15 @@ struct EventParserTests {
         #expect(messages[5].other!["message 6-1"] == "")
     }
 
-    @Test func dataOnlyMode() throws {
-        let parser = ServerEventParser(mode: .dataOnly)
+    @Test func dataOnlyMode() async throws {
+        var parser = ServerEventParser(mode: .dataOnly)
         let jsonDecoder = JSONDecoder()
 
         let text = """
         data: {"id":"abcd-1","type":"message","content":"\\ntest\\n"}
 
         data: {"id":"abcd-2","type":"message","content":"\\n\\n"}
+        
         
         """
         let data = Data(text.utf8)
@@ -146,6 +151,45 @@ struct EventParserTests {
 
         #expect(message1.content == "\ntest\n")
         #expect(message2.content == "\n\n")
+    }
+
+    @Test func parseNotCompleteMessage() async throws {
+        var parser = ServerEventParser()
+
+        let text = """
+        data: test 1
+        """
+        let data = Data(text.utf8)
+
+        let messages = parser.parse(data)
+
+        #expect(messages.count == 0)
+    }
+
+    @Test func parseSeparatedMessage() async throws {
+        var parser = ServerEventParser()
+
+        let textPart1 = """
+        event: add
+        
+        """
+        let dataPart1 = Data(textPart1.utf8)
+        let textPart2 = """
+        data: test 1
+        
+        
+        """
+        let dataPart2 = Data(textPart2.utf8)
+
+        let _ = parser.parse(dataPart1)
+        let messages = parser.parse(dataPart2)
+
+        #expect(messages.count == 1)
+
+        #expect(messages[0].event != nil)
+        #expect(messages[0].data != nil)
+        #expect(messages[0].event! == "add")
+        #expect(messages[0].data! == "test 1")
     }
 }
 
