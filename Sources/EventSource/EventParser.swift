@@ -9,11 +9,11 @@
 import Foundation
 
 public protocol EventParser: Sendable {
-    func parse(_ data: Data) async -> [EVEvent]
+    mutating func parse(_ data: Data) -> [EVEvent]
 }
 
 /// ``ServerEventParser`` is used to parse text data into ``ServerEvent``.
-actor ServerEventParser: EventParser {
+struct ServerEventParser: EventParser {
     private let mode: EventSource.Mode
     private var buffer = Data()
 
@@ -24,7 +24,7 @@ actor ServerEventParser: EventParser {
     static let lf: UInt8 = 0x0A
     static let colon: UInt8 = 0x3A
 
-    func parse(_ data: Data) -> [EVEvent] {
+    mutating func parse(_ data: Data) -> [EVEvent] {
         let (separatedMessages, remainingData) = splitBuffer(for: buffer + data)
         buffer = remainingData
         return parseBuffer(for: separatedMessages)
@@ -44,7 +44,7 @@ actor ServerEventParser: EventParser {
         // If event separator is not present do not parse any unfinished messages
         guard let lastSeparator = data.lastRange(of: separator) else { return ([], data) }
 
-        let bufferRange = data.startIndex..<lastSeparator.lowerBound
+        let bufferRange = data.startIndex..<lastSeparator.upperBound
         let remainingRange = lastSeparator.upperBound..<data.endIndex
 
         if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {

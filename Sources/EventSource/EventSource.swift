@@ -91,7 +91,7 @@ public extension EventSource {
         /// A URLRequest of the events source.
         public let urlRequest: URLRequest
 
-        private let eventParser: EventParser
+        private var eventParser: EventParser
 
         private let timeoutInterval: TimeInterval
 
@@ -146,7 +146,7 @@ public extension EventSource {
                         case let .didReceiveResponse(response, completionHandler):
                             handleSessionResponse(response, completionHandler: completionHandler)
                         case let .didReceiveData(data):
-                            await parseMessages(from: data)
+                            parseMessages(from: data)
                         }
                     }
                 }
@@ -239,7 +239,7 @@ public extension EventSource {
             cancel()
         }
 
-        private func parseMessages(from data: Data) async {
+        private func parseMessages(from data: Data) {
             if let httpResponseErrorStatusCode {
                 self.httpResponseErrorStatusCode = nil
                 handleSessionError(
@@ -248,7 +248,7 @@ public extension EventSource {
                 return
             }
             
-            let events = await eventParser.parse(data)
+            let events = eventParser.parse(data)
 
             // Update last message ID
             if let lastMessageWithId = events.last(where: { $0.id != nil }) {
