@@ -103,7 +103,7 @@ var response: String = ""
 for await event in await dataTask.events() {
     switch event {
     case .event(let event):
-        if let data = eventDevent.data?ata.data(using: .utf8) {
+        if let data = eventDevent.data?.data(using: .utf8) {
             let chunk = try? JSONDecoder().decode(ChatCompletionChunk.self, from: data)
             let string = chunk?.choices.first?.delta.content ?? ""
             response += string
