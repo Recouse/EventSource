@@ -94,39 +94,24 @@ struct EventParserTests {
         message 6
         message 6-1
         
+        :
         
         """
         let data = Data(text.utf8)
                 
         let events = parser.parse(data)
 
-        let event0Data = try #require(events[safe: 0]?.data)
-        #expect(event0Data == "test 1")
+        // Due to extra spaces in the field names, the first four events failed to be interpreted correctly;
+        // therefore, only two events should be parsed
+        #expect(events.count == 2)
 
-        let event1ID = try #require(events[safe: 1]?.id)
-        let event1Data = try #require(events[safe: 1]?.data)
-        #expect(event1ID == "2")
-        #expect(event1Data == "test 2")
+        let event1Other = try #require(events[safe: 0]?.other?["test 5"])
+        #expect(event1Other == "")
 
-        let event2 = try #require(events[safe: 2]?.event)
-        let event2Data = try #require(events[safe: 2]?.data)
-        #expect(event2 == "add")
-        #expect(event2Data == " test 3")
-
-        let event3ID = try #require(events[safe: 3]?.id)
-        let event3 = try #require(events[safe: 3]?.event)
-        let event3Data = try #require(events[safe: 3]?.data)
-        #expect(event3ID == "4")
-        #expect(event3 == "ping")
-        #expect(event3Data == "test 4")
-
-        let event4Other = try #require(events[safe: 4]?.other?["test 5"])
-        #expect(event4Other == "")
-
-        let event5Other1 = try #require(events[safe: 5]?.other?["message 6"])
-        let event5Other2 = try #require(events[safe: 5]?.other?["message 6-1"])
-        #expect(event5Other1 == "")
-        #expect(event5Other2 == "")
+        let event2Other1 = try #require(events[safe: 1]?.other?["message 6"])
+        let event2Other2 = try #require(events[safe: 1]?.other?["message 6-1"])
+        #expect(event2Other1 == "")
+        #expect(event2Other2 == "")
     }
 
     @Test func dataOnlyMode() async throws {

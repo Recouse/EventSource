@@ -79,12 +79,12 @@ public struct ServerEvent: EVEvent {
         
         for row in rows {
             // Skip the line if it is empty or it starts with a colon character
-            if row.isEmpty, row.first == ServerEventParser.colon {
+            if row.isEmpty || row.first == ServerEventParser.colon {
                 continue
             }
             
             let keyValue = row.split(separator: ServerEventParser.colon, maxSplits: 1)
-            let key = keyValue[0].utf8String.trimmingCharacters(in: .whitespaces)
+            let key = keyValue[0].utf8String
 
             // If value starts with a SPACE character, remove it from value
             let valueString = keyValue[safe: 1]?.utf8String
