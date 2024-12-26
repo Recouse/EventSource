@@ -85,8 +85,15 @@ public struct ServerEvent: EVEvent {
             
             let keyValue = row.split(separator: ServerEventParser.colon, maxSplits: 1)
             let key = keyValue[0].utf8String.trimmingCharacters(in: .whitespaces)
-            let value = keyValue[safe: 1]?.utf8String.trimmingCharacters(in: .whitespaces)
-            
+
+            // If value starts with a SPACE character, remove it from value
+            let valueString = keyValue[safe: 1]?.utf8String
+            let value = if let valueString, valueString.hasPrefix(" ") {
+                String(valueString.dropFirst())
+            } else {
+                valueString
+            }
+
             switch key {
             case "id":
                 message.id = value

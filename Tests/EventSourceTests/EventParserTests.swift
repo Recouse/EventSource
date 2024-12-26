@@ -111,7 +111,7 @@ struct EventParserTests {
         let event2 = try #require(events[safe: 2]?.event)
         let event2Data = try #require(events[safe: 2]?.data)
         #expect(event2 == "add")
-        #expect(event2Data == "test 3")
+        #expect(event2Data == " test 3")
 
         let event3ID = try #require(events[safe: 3]?.id)
         let event3 = try #require(events[safe: 3]?.event)
