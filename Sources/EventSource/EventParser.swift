@@ -66,16 +66,16 @@ fileprivate extension Data {
     func split(by separator: [UInt8]) -> [Data] {
         var chunks: [Data] = []
         var pos = startIndex
-        // Find next occurrence of separator after current position:
+        // Find next occurrence of separator after current position
         while let r = self[pos...].range(of: Data(separator)) {
-            // Append if non-empty:
+            // Append if non-empty
             if r.lowerBound > pos {
                 chunks.append(self[pos..<r.lowerBound])
             }
-            // Update current position:
+            // Update current position
             pos = r.upperBound
         }
-        // Append final chunk, if non-empty:
+        // Append final chunk, if non-empty
         if pos < endIndex {
             chunks.append(self[pos..<endIndex])
         }
