@@ -25,6 +25,20 @@ jobs:
       run: swift build -v
     - name: Run tests
       run: swift test -v
+  ios-15:
+    name: Build on iOS 15
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Set up iOS 15 simulator runtime
+      run: |
+          brew install xcodesorg/made/xcodes
+          xcodes runtimes install "iOS 15.5"
+    - name: Build
+      run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
+    - name: Run tests
+      run: xcodebuild test -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
   ubuntu:
     name: Build Linux
     runs-on: ubuntu-latest
