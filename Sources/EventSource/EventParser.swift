@@ -64,22 +64,21 @@ fileprivate extension Data {
     @available(tvOS, deprecated: 16.0, obsoleted: 16.0, message: "This method is not recommended on tvOS 16.0+")
     @available(visionOS, deprecated: 1.0, obsoleted: 1.1, message: "This method is not recommended on visionOS 1.0+")
     func split(by separator: [UInt8]) -> [Data] {
-        let doubleNewline = Data(separator)
-        var splits: [Data] = []
-        var currentIndex = 0
-        var range: Range<Data.Index>?
-
-        while true {
-            range = self.range(of: doubleNewline, options: [], in: currentIndex..<self.count)
-            if let foundRange = range {
-                splits.append(self.subdata(in: currentIndex..<foundRange.lowerBound))
-                currentIndex = foundRange.upperBound
-            } else {
-                splits.append(self.subdata(in: currentIndex..<self.count))
-                break
+        var chunks: [Data] = []
+        var pos = startIndex
+        // Find next occurrence of separator after current position
+        while let r = self[pos...].range(of: Data(separator)) {
+            // Append if non-empty
+            if r.lowerBound > pos {
+                chunks.append(self[pos..<r.lowerBound])
             }
+            // Update current position
+            pos = r.upperBound
         }
-
-        return splits
+        // Append final chunk, if non-empty
+        if pos < endIndex {
+            chunks.append(self[pos..<endIndex])
+        }
+        return chunks
     }
 }
