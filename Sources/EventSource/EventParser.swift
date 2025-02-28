@@ -39,29 +39,30 @@ struct ServerEventParser: EventParser {
     }
 
     private func splitBuffer(for data: Data) -> (completeData: [Data], remainingData: Data) {
-        let possibleSeparators: [[UInt8]] = [
-            [Self.lf, Self.lf],
-            [Self.cr, Self.lf],
-        ]
+        let separator: [UInt8] = [Self.lf, Self.lf]
         var rawMessages = [Data]()
 
-        for separator in possibleSeparators {
-            // If event separator is not present do not parse any unfinished messages
-            guard let lastSeparator = data.lastRange(of: separator) else { continue }
-
-            let bufferRange = data.startIndex ..< lastSeparator.upperBound
-            let remainingRange = lastSeparator.upperBound ..< data.endIndex
-
-            if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
-                rawMessages = data[bufferRange].split(separator: separator)
-            } else {
-                rawMessages = data[bufferRange].split(by: separator)
-            }
-
-            return (rawMessages, data[remainingRange])
+        // now replace CR LF with LF LF for processing mixed content
+        var data = data
+        while let crlfRange = data.lastRange(of: [Self.cr, Self.lf]) {
+            data.replaceSubrange(crlfRange, with: [Self.lf])
         }
 
-        return ([], data)
+        // If event separator is not present do not parse any unfinished messages
+        guard let lastSeparator = data.lastRange(of: separator) else {
+            return ([], data)
+        }
+
+        let bufferRange = data.startIndex ..< lastSeparator.upperBound
+        let remainingRange = lastSeparator.upperBound ..< data.endIndex
+
+        if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
+            rawMessages = data[bufferRange].split(separator: separator)
+        } else {
+            rawMessages = data[bufferRange].split(by: separator)
+        }
+
+        return (rawMessages, data[remainingRange])
     }
 }
 
