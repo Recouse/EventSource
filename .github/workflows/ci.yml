@@ -43,7 +43,7 @@ jobs:
       if: steps.cache-ios-15-runtime.outputs.cache-hit != 'true'
       run: sudo xcodes runtimes install "iOS 15.5"
     - name: Boot iOS Simulator
-      run: xcrun simctl boot "iPhone 13 Pro (15.5)"
+      run: xcrun simctl boot "iPhone 13 Pro"
     - name: Build
       run: |
         xcrun simctl list devices
