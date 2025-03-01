@@ -45,7 +45,7 @@ jobs:
     - name: Create iOS 15 simulator
       id: create-ios-15-simulator
       run: |
-        SIMULATOR_ID=$(xcrun simctl create "iPhone 13 Pro (15.5)" "iPhone 13 Pro" "com.apple.CoreSimulator.SimRuntime.iOS-15-5")
+        SIMULATOR_ID=$(xcrun simctl create "iPhone 13 Pro" "com.apple.CoreSimulator.SimDeviceType.iPhone-13-Pro" "com.apple.CoreSimulator.SimRuntime.iOS-15-5")
         echo "simulator_id=$SIMULATOR_ID" >> $GITHUB_OUTPUT
     - name: Build
       run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'id=${{ steps.create-ios-15-simulator.outputs.simulator_id }}'
