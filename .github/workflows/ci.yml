@@ -35,7 +35,7 @@ jobs:
       uses: actions/cache@v4
       id: cache-ios-15-runtime
       with:
-        path: /Library/Developer/CoreSimulator/Profiles/Runtimes
+        path: ~/Downloads
         key: ios-runtime-15.5
     - name: Set up iOS 15 simulator runtime (if not cached)
       if: steps.cache-ios-15-runtime.outputs.cache-hit != 'true'
