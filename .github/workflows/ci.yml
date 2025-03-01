@@ -31,8 +31,6 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Set up Xcode 16.2
-      run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
     - name: Restore Cached iOS Simulator Runtime
       uses: actions/cache@v4
       id: cache-ios-15-runtime
@@ -42,12 +40,8 @@ jobs:
     - name: Set up iOS 15 simulator runtime (if not cached)
       if: steps.cache-ios-15-runtime.outputs.cache-hit != 'true'
       run: sudo xcodes runtimes install "iOS 15.5"
-    - name: Boot iOS Simulator
-      run: xcrun simctl boot "iPhone 13 Pro"
     - name: Build
-      run: |
-        xcrun simctl list devices
-        xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
+      run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
     - name: Run tests
       run: xcodebuild test -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
   ubuntu:
