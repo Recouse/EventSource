@@ -177,6 +177,39 @@ struct EventParserTests {
         #expect(event == "add")
         #expect(eventData == "test 1")
     }
+
+    @Test func parseWithDifferentLineEndings() async throws {
+        var parser = ServerEventParser()
+
+        // Test with CR+LF (\r\n) as line endings - using separate events for clarity
+        let textCRLF = "data: test crlfline1\r\n\r\n" +
+                      "data: crlfline2\r\n\r\n" +
+                      "event: add\r\ndata: crlftest\r\n\r\n" + 
+                      "id: 3\r\nevent: ping\r\ndata: crlfping\r\n\r\n"
+
+        // Test with mixed LF (\n) and CR+LF (\r\n) - using separate events
+        let textMixed = "data: test mixedline1\n\n" +
+                       "data: mixedline2\r\n\n" +
+                       "event: update\r\ndata: mixedtest\n\n" +
+                       "id: 4\nevent: pong\r\ndata: mixedpong\r\n\n"
+        
+        // Convert to Data
+        let dataCRLF = Data(textCRLF.utf8)
+        let dataMixed = Data(textMixed.utf8)
+
+        // Parse pure CR+LF format
+        let eventsCRLF = parser.parse(dataCRLF)
+        #expect(eventsCRLF.count == 4)
+        #expect(eventsCRLF.compactMap(\.id) == ["3"])
+        #expect(eventsCRLF.compactMap(\.data) == ["test crlfline1", "crlfline2", "crlftest", "crlfping"])
+        #expect(eventsCRLF.compactMap(\.event) == ["add", "ping"])
+
+        let eventsMixed = parser.parse(dataMixed)
+        #expect(eventsMixed.count == 4)
+        #expect(eventsMixed.compactMap(\.id) == ["4"])
+        #expect(eventsMixed.compactMap(\.data) == ["test mixedline1", "mixedline2", "mixedtest", "mixedpong"])
+        #expect(eventsMixed.compactMap(\.event) == ["update", "pong"])
+    }
 }
 
 fileprivate extension EventParserTests {
