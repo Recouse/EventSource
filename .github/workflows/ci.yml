@@ -31,21 +31,19 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Create Downloads Directory
-      run: mkdir -p ~/Downloads
+    - name: Create Runtimes Directory
+      run: mkdir -p $HOME/Runtimes
     - name: Restore cached iOS simulator runtime
       id: cache-restore
       uses: actions/cache@v4
       with:
-        path: ~/Downloads
+        path: $HOME/Runtimes
         key: ios-runtime-15.5-${{ runner.os }}-${{ hashFiles('**/ci.yml') }}
         restore-keys: |
           ios-runtime-15.5-${{ runner.os }}-
           ios-runtime-15.5-
     - name: Set up iOS 15 simulator runtime
-      run: |
-        sudo xcodes runtimes install "iOS 15.5" --directory ~/Downloads
-        ls -l ~/Downloads
+      run: sudo xcodes runtimes install "iOS 15.5" --directory $HOME/Runtimes
     - name: Build
       run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
     - name: Run tests
