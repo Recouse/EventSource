@@ -43,7 +43,9 @@ jobs:
       if: steps.cache-ios-15-runtime.outputs.cache-hit != 'true'
       run: sudo xcodes runtimes install "iOS 15.5"
     - name: Build
-      run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
+      run: |
+        xcrun simctl list devices
+        xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
     - name: Run tests
       run: xcodebuild test -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
   ubuntu:
