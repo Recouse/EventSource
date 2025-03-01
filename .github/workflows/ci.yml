@@ -42,10 +42,6 @@ jobs:
     - name: Set up iOS 15 simulator runtime (if not cached)
       if: steps.cache-ios-15-runtime.outputs.cache-hit != 'true'
       run: sudo xcodes runtimes install "iOS 15.5"
-    - name: Create iOS 15 simulator
-      run: |
-        xcrun simctl create "iPhone 13 Pro" "com.apple.CoreSimulator.SimDeviceType.iPhone-13-Pro" "com.apple.CoreSimulator.SimRuntime.iOS-15-5"
-        xcrun simctl list devices
     - name: Build
       run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
     - name: Run tests
