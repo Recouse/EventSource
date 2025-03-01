@@ -43,7 +43,7 @@ jobs:
           ios-runtime-15.5-${{ runner.os }}-
           ios-runtime-15.5-
     - name: Set up iOS 15 simulator runtime
-      run: sudo xcodes runtimes install "iOS 15.5" --directory $HOME/Runtimes --keep-archive true
+      run: sudo xcodes runtimes install "iOS 15.5" --directory $HOME/Runtimes --keep-archive
     - name: Build
       run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
     - name: Run tests
