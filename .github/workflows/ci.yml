@@ -42,12 +42,24 @@ jobs:
     - name: Set up iOS 15 simulator runtime (if not cached)
       if: steps.cache-ios-15-runtime.outputs.cache-hit != 'true'
       run: sudo xcodes runtimes install "iOS 15.5"
+    - name: Check if iOS 15 simulator exists
+      id: check-simulator
+      run: |
+        SIMULATOR_ID=$(xcrun simctl list devices | grep "iPhone 13 Pro (15.5)" | head -n 1 | awk '{print $4}' | tr -d '()')
+        if [ -z "$SIMULATOR_ID" ]; then
+          echo "simulator_id=false" >> $GITHUB_OUTPUT
+        else
+          echo "simulator_id=$SIMULATOR_ID" >> $GITHUB_OUTPUT
+        fi
     - name: Create iOS 15 simulator
-      run: xcrun simctl create "iPhone 13 Pro" "iPhone 13 Pro" "com.apple.CoreSimulator.SimRuntime.iOS-15-5"
+      if: steps.check-simulator.outputs.simulator_id == 'false'
+      run: |
+        SIMULATOR_ID=$(xcrun simctl create "iPhone 13 Pro (15.5)" "iPhone 13 Pro" "com.apple.CoreSimulator.SimRuntime.iOS-15-5")
+        echo "simulator_id=$SIMULATOR_ID" >> $GITHUB_OUTPUT
     - name: Build
-      run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
+      run: xcodebuild build -scheme EventSource -sdk iphonesimulator -destination 'id={{ steps.check-simulator.outputs.simulator_id }}'
     - name: Run tests
-      run: xcodebuild test -scheme EventSource -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 13 Pro,OS=15.5'
+      run: xcodebuild test -scheme EventSource -sdk iphonesimulator -destination 'id={{ steps.check-simulator.outputs.simulator_id }}'
   ubuntu:
     name: Build Linux
     runs-on: ubuntu-latest
