@@ -45,21 +45,23 @@ public struct EventSource: Sendable {
 
     private let mode: Mode
 
-    private let eventParser: EventParser
-    
+    private let eventParser: @Sendable () -> EventParser
+
     public var timeoutInterval: TimeInterval
-    
+
+    public init(mode: Mode = .default, timeoutInterval: TimeInterval = 300) {
+        self.mode = mode
+        self.eventParser = { ServerEventParser(mode: mode) }
+        self.timeoutInterval = timeoutInterval
+    }
+
     public init(
         mode: Mode = .default,
-        eventParser: EventParser? = nil,
+        eventParser: @autoclosure @escaping @Sendable () -> EventParser,
         timeoutInterval: TimeInterval = 300
     ) {
         self.mode = mode
-        if let eventParser {
-            self.eventParser = eventParser
-        } else {
-            self.eventParser = ServerEventParser(mode: mode)
-        }
+        self.eventParser = eventParser
         self.timeoutInterval = timeoutInterval
     }
 
@@ -67,7 +69,7 @@ public struct EventSource: Sendable {
     public func dataTask(for urlRequest: URLRequest) -> DataTask {
         DataTask(
             urlRequest: urlRequest,
-            eventParser: eventParser,
+            eventParser: eventParser(),
             timeoutInterval: timeoutInterval
         )
     }
