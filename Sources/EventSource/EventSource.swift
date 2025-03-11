@@ -50,9 +50,7 @@ public struct EventSource: Sendable {
     public var timeoutInterval: TimeInterval
 
     public init(mode: Mode = .default, timeoutInterval: TimeInterval = 300) {
-        self.mode = mode
-        self.eventParser = { ServerEventParser(mode: mode) }
-        self.timeoutInterval = timeoutInterval
+        self.init(mode: mode, eventParser: ServerEventParser(mode: mode), timeoutInterval: timeoutInterval)
     }
 
     public init(
