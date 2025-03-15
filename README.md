@@ -16,7 +16,6 @@ It also leverages Swift concurrency features to provide a more expressive and in
 - [x] Simple Swift API for SSE
 - [x] Supports data-only mode
 - [x] Data race safety with Swift 6
-- [ ] Broadcast event stream to multiple consumers (WIP)
 
 ## Installation
 
@@ -57,9 +56,9 @@ Using EventSource is easy. Simply create a new data task from an instance of Eve
 import EventSource
 
 let eventSource = EventSource()
-let dataTask = await eventSource.dataTask(for: urlRequest)
+let dataTask = eventSource.dataTask(for: urlRequest)
 
-for await event in await dataTask.events() {
+for await event in dataTask.events() {
     switch event {
     case .open:
         print("Connection was opened.")
@@ -96,11 +95,11 @@ urlRequest.httpBody = """
 """.data(using: .utf8)!
 
 let eventSource = EventSource(mode: .dataOnly)
-let dataTask = await eventSource.dataTask(for: urlRequest)
+let dataTask = eventSource.dataTask(for: urlRequest)
 
 var response: String = ""
 
-for await event in await dataTask.events() {
+for await event in dataTask.events() {
     switch event {
     case .event(let event):
         if let data = eventDevent.data?.data(using: .utf8) {
@@ -131,6 +130,10 @@ No dependencies.
 ## Contributing
 
 Contributions to are always welcomed! For more details see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Credits
+
+* Mutex backport from [swift-sharing](https://github.com/pointfreeco/swift-sharing)
 
 ## License
 
