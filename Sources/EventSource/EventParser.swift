@@ -22,6 +22,7 @@ struct ServerEventParser: EventParser {
     }
 
     static let lf: UInt8 = 0x0A
+    static let cr: UInt8 = 0x0D
     static let colon: UInt8 = 0x3A
 
     mutating func parse(_ data: Data) -> [EVEvent] {
@@ -41,11 +42,19 @@ struct ServerEventParser: EventParser {
         let separator: [UInt8] = [Self.lf, Self.lf]
         var rawMessages = [Data]()
 
-        // If event separator is not present do not parse any unfinished messages
-        guard let lastSeparator = data.lastRange(of: separator) else { return ([], data) }
+        // now replace CR LF with LF LF for processing mixed content
+        var data = data
+        while let crlfRange = data.lastRange(of: [Self.cr, Self.lf]) {
+            data.replaceSubrange(crlfRange, with: [Self.lf])
+        }
 
-        let bufferRange = data.startIndex..<lastSeparator.upperBound
-        let remainingRange = lastSeparator.upperBound..<data.endIndex
+        // If event separator is not present do not parse any unfinished messages
+        guard let lastSeparator = data.lastRange(of: separator) else {
+            return ([], data)
+        }
+
+        let bufferRange = data.startIndex ..< lastSeparator.upperBound
+        let remainingRange = lastSeparator.upperBound ..< data.endIndex
 
         if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
             rawMessages = data[bufferRange].split(separator: separator)
