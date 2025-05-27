@@ -16,7 +16,6 @@ It also leverages Swift concurrency features to provide a more expressive and in
 - [x] Simple Swift API for SSE
 - [x] Supports data-only mode
 - [x] Data race safety with Swift 6
-- [ ] Broadcast event stream to multiple consumers (WIP)
 
 ## Installation
 
@@ -56,19 +55,21 @@ Using EventSource is easy. Simply create a new data task from an instance of Eve
 ```swift
 import EventSource
 
-let eventSource = EventSource()
-let dataTask = await eventSource.dataTask(for: urlRequest)
-
-for await event in await dataTask.events() {
-    switch event {
-    case .open:
-        print("Connection was opened.")
-    case .error(let error):
-        print("Received an error:", error.localizedDescription)
-    case .event(let event):
-        print("Received an event", event.data ?? "")
-    case .closed:
-        print("Connection was closed.")
+Task {
+    let eventSource = EventSource()
+    let dataTask = eventSource.dataTask(for: urlRequest)
+    
+    for await event in dataTask.events() {
+        switch event {
+        case .open:
+            print("Connection was opened.")
+        case .error(let error):
+            print("Received an error:", error.localizedDescription)
+        case .event(let event):
+            print("Received an event", event.data ?? "")
+        case .closed:
+            print("Connection was closed.")
+        }
     }
 }
 ```
@@ -79,41 +80,43 @@ Use `dataTask.cancel()` to explicitly close the connection. However, in that cas
 
 EventSource can be used in data-only mode, making it suitable for popular APIs like [OpenAI](https://platform.openai.com/docs/overview). Below is an example using OpenAI's [completions](https://platform.openai.com/docs/guides/text-generation) API:
 ```swift
-var urlRequest = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
-urlRequest.allHTTPHeaderFields = [
-    "Content-Type": "application/json",
-    "Authorization": "Bearer \(accessToken)"
-]
-urlRequest.httpMethod = "POST"
-urlRequest.httpBody = """
-{
-    "model": "gpt-4o-mini",
-    "messages": [
-        {"role": "user", "content": "Why is the sky blue?"}
-    ],
-    "stream": true
-}
-""".data(using: .utf8)!
-
-let eventSource = EventSource(mode: .dataOnly)
-let dataTask = await eventSource.dataTask(for: urlRequest)
-
-var response: String = ""
-
-for await event in await dataTask.events() {
-    switch event {
-    case .event(let event):
-        if let data = eventDevent.data?.data(using: .utf8) {
-            let chunk = try? JSONDecoder().decode(ChatCompletionChunk.self, from: data)
-            let string = chunk?.choices.first?.delta.content ?? ""
-            response += string
-        }
-    default:
-        break
+Task {
+    var urlRequest = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
+    urlRequest.allHTTPHeaderFields = [
+        "Content-Type": "application/json",
+        "Authorization": "Bearer \(accessToken)"
+    ]
+    urlRequest.httpMethod = "POST"
+    urlRequest.httpBody = """
+    {
+        "model": "gpt-4o-mini",
+        "messages": [
+            {"role": "user", "content": "Why is the sky blue?"}
+        ],
+        "stream": true
     }
+    """.data(using: .utf8)!
+    
+    let eventSource = EventSource(mode: .dataOnly)
+    let dataTask = eventSource.dataTask(for: urlRequest)
+    
+    var response: String = ""
+    
+    for await event in dataTask.events() {
+        switch event {
+        case .event(let event):
+            if let data = eventDevent.data?.data(using: .utf8) {
+                let chunk = try? JSONDecoder().decode(ChatCompletionChunk.self, from: data)
+                let string = chunk?.choices.first?.delta.content ?? ""
+                response += string
+            }
+        default:
+            break
+        }
+    }
+    
+    print(response)
 }
-
-print(response)
 ```
 
 ## Compatibility
@@ -131,6 +134,10 @@ No dependencies.
 ## Contributing
 
 Contributions to are always welcomed! For more details see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Credits
+
+* Mutex backport from [swift-sharing](https://github.com/pointfreeco/swift-sharing)
 
 ## License
 
