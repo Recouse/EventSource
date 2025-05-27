@@ -39,30 +39,54 @@ struct ServerEventParser: EventParser {
     }
 
     private func splitBuffer(for data: Data) -> (completeData: [Data], remainingData: Data) {
-        let separator: [UInt8] = [Self.lf, Self.lf]
-        var rawMessages = [Data]()
-
-        // now replace CR LF with LF LF for processing mixed content
-        var data = data
-        while let crlfRange = data.lastRange(of: [Self.cr, Self.lf]) {
-            data.replaceSubrange(crlfRange, with: [Self.lf])
-        }
-
-        // If event separator is not present do not parse any unfinished messages
-        guard let lastSeparator = data.lastRange(of: separator) else {
+        let separators: [[UInt8]] = [[Self.lf, Self.lf], [Self.cr, Self.lf, Self.cr, Self.lf]]
+        
+        // find last range of our separator, most likely to be fast enough
+        let (chosenSeparator, lastSeparatorRange) = findLastSeparator(in: data, separators: separators)
+        guard let separator = chosenSeparator, let lastSeparator = lastSeparatorRange else {
             return ([], data)
         }
-
+        
+        // chop everything before the last separator, going forward, O(n) complexity
         let bufferRange = data.startIndex ..< lastSeparator.upperBound
         let remainingRange = lastSeparator.upperBound ..< data.endIndex
-
-        if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
-            rawMessages = data[bufferRange].split(separator: separator)
+        let rawMessages: [Data] = if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
+            data[bufferRange].split(separator: separator)
         } else {
-            rawMessages = data[bufferRange].split(by: separator)
+            data[bufferRange].split(by: separator)
         }
+        
+        // now clean up the messages and return
+        let cleanedMessages = rawMessages.map { cleanMessageData($0) }
+        return (cleanedMessages, data[remainingRange])
+    }
 
-        return (rawMessages, data[remainingRange])
+    private func findLastSeparator(in data: Data, separators: [[UInt8]]) -> ([UInt8]?, Range<Data.Index>?) {
+        var chosenSeparator: [UInt8]?
+        var lastSeparatorRange: Range<Data.Index>?
+        for separator in separators {
+            if let range = data.lastRange(of: separator) {
+                if lastSeparatorRange == nil || range.upperBound > lastSeparatorRange!.upperBound {
+                    chosenSeparator = separator
+                    lastSeparatorRange = range
+                }
+            }
+        }
+        return (chosenSeparator, lastSeparatorRange)
+    }
+
+    private func cleanMessageData(_ messageData: Data) -> Data {
+        var cleanData = messageData
+        // remove trailing CR/LF characters from the end
+        while !cleanData.isEmpty, cleanData.last == Self.cr || cleanData.last == Self.lf {
+            cleanData = cleanData.dropLast()
+        }
+        guard let messageString = String(data: cleanData, encoding: .utf8) else { return cleanData }
+        // also clean internal lines within each message to remove trailing \r
+        let cleanedLines = messageString.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "\r")) }
+        let cleanedMessage = cleanedLines.joined(separator: "\n")
+        return Data(cleanedMessage.utf8)
     }
 }
 
