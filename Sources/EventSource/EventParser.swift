@@ -77,16 +77,18 @@ struct ServerEventParser: EventParser {
 
     private func cleanMessageData(_ messageData: Data) -> Data {
         var cleanData = messageData
+
         // remove trailing CR/LF characters from the end
         while !cleanData.isEmpty, cleanData.last == Self.cr || cleanData.last == Self.lf {
             cleanData = cleanData.dropLast()
         }
-        guard let messageString = String(data: cleanData, encoding: .utf8) else { return cleanData }
+
         // also clean internal lines within each message to remove trailing \r
-        let cleanedLines = messageString.components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "\r")) }
-        let cleanedMessage = cleanedLines.joined(separator: "\n")
-        return Data(cleanedMessage.utf8)
+        let cleanedLines = cleanData.split(separator: Self.lf)
+            .map { line in line.trimming(while: { $0 == Self.cr }) }
+            .joined(separator: [Self.lf])
+
+        return Data(cleanedLines)
     }
 }
 
