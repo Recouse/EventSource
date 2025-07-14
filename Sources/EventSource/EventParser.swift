@@ -39,7 +39,7 @@ struct ServerEventParser: EventParser {
     }
 
     private func splitBuffer(for data: Data) -> (completeData: [Data], remainingData: Data) {
-        let separators: [[UInt8]] = [[Self.lf, Self.lf], [Self.cr, Self.lf, Self.cr, Self.lf]]
+        let separators: [[UInt8]] = [[Self.cr, Self.cr], [Self.lf, Self.lf], [Self.cr, Self.lf, Self.cr, Self.lf]]
         
         // find last range of our separator, most likely to be fast enough
         let (chosenSeparator, lastSeparatorRange) = findLastSeparator(in: data, separators: separators)
