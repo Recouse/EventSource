@@ -68,22 +68,28 @@ public struct ServerEvent: EVEvent {
     }
     
     public static func parse(from data: Data, mode: EventSource.Mode = .default) -> ServerEvent? {
-        let rows: [Data] = switch mode {
-        case .default:
-            data.split(separator: ServerEventParser.lf) // Separate event fields
-        case .dataOnly:
-            [data] // Do not split data in data-only mode
-        }
+        let recivedStr = String(data: data, encoding: .utf8)
+        
+        let rows: [Data] = {
+            switch mode {
+            case .default:
+                let (separatedMessages, remainingData) = data.split(separators: singleSeparators)
+                return separatedMessages + [remainingData]
+                
+            case .dataOnly:
+                return [data] // Do not split data in data-only mode
+            }
+        }()
 
         var message = ServerEvent()
         
         for row in rows {
             // Skip the line if it is empty or it starts with a colon character
-            if row.isEmpty || row.first == ServerEventParser.colon {
+            if row.isEmpty || row.first == colon {
                 continue
             }
             
-            let keyValue = row.split(separator: ServerEventParser.colon, maxSplits: 1)
+            let keyValue = row.split(separator: colon, maxSplits: 1)
             let key = keyValue[0].utf8String
 
             // If value starts with a SPACE character, remove it from value
@@ -111,7 +117,7 @@ public struct ServerEvent: EVEvent {
                 // If the line is not empty but does not contain a colon character
                 // add it to the other fields using the whole line as the field name,
                 // and the empty string as the field value.
-                if row.contains(ServerEventParser.colon) == false {
+                if row.contains(colon) == false {
                     let string = row.utf8String
                     if var other = message.other {
                         other[string] = ""
