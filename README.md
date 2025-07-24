@@ -67,7 +67,7 @@ Task {
             print("Received an error:", error.localizedDescription)
         case .event(let event):
             print("Received an event", event.data ?? "")
-        case .closed:
+        case .closed(let undecodeText):
             print("Connection was closed.")
         }
     }

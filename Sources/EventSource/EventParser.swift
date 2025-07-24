@@ -16,15 +16,15 @@ public protocol EventParser: Sendable {
 struct ServerEventParser: EventParser {
     private let mode: EventSource.Mode
     private var buffer = Data()
+    
+    var undeocdeText: String? { .init(data: buffer, encoding: .utf8) }
 
     init(mode: EventSource.Mode = .default) {
         self.mode = mode
     }
 
-
     mutating func parse(_ data: Data) -> [EVEvent] {
         let (separatedMessages, remainingData) = (buffer + data).split(separators: doubleSeparators)
-        
         buffer = remainingData
         return parseBuffer(for: separatedMessages)
     }

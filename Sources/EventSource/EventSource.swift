@@ -35,7 +35,7 @@ public struct EventSource: Sendable {
         case error(Error)
         case event(EVEvent)
         case open
-        case closed
+        case closed(String?)
     }
 
     private let mode: Mode
@@ -277,7 +277,7 @@ public extension EventSource {
         private func close(stream continuation: AsyncStream<EventType>.Continuation, urlSession: URLSession) {
             let previousState = self.readyState
             if previousState != .closed {
-                continuation.yield(.closed)
+                continuation.yield(.closed((eventParser as? ServerEventParser)?.undeocdeText))
                 continuation.finish()
             }
             cancel(urlSession: urlSession)
