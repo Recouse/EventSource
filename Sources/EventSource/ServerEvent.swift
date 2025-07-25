@@ -68,8 +68,6 @@ public struct ServerEvent: EVEvent {
     }
     
     public static func parse(from data: Data, mode: EventSource.Mode = .default) -> ServerEvent? {
-        let recivedStr = String(data: data, encoding: .utf8)
-        
         let rows: [Data] = {
             switch mode {
             case .default:
