@@ -32,10 +32,11 @@ public struct EventSource: Sendable {
     
     /// Event type.
     public enum EventType: Sendable {
-        case error(Error)
-        case event(EVEvent)
         case open
+        case recived(Data)
+        case event(EVEvent)
         case closed(String?)
+        case error(Error)
     }
 
     private let mode: Mode
@@ -193,6 +194,7 @@ public extension EventSource {
                                 completionHandler: completionHandler
                             )
                         case let .didReceiveData(data):
+                            continuation.yield(.recived(data))
                             parseMessages(from: data, stream: continuation, urlSession: urlSession)
                         }
                     }
