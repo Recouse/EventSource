@@ -80,7 +80,7 @@ Task {
 }
 ```
 
-Use `dataTask.cancel()` to explicitly close the connection. However, in that case `.closed` event won't be emitted.
+Use `dataTask.cancel()` to explicitly close the connection.
 
 ### Data-only mode
 
