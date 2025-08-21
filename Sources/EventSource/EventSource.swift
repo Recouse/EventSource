@@ -138,6 +138,17 @@ public extension EventSource {
             }
         }
 
+        private let _urlSession: Mutex<URLSession?> = Mutex(nil)
+
+        private var urlSession: URLSession? {
+            get {
+                _urlSession.withLock { $0 }
+            }
+            set {
+                _urlSession.withLock { $0 = newValue }
+            }
+        }
+
         private var urlSessionConfiguration: URLSessionConfiguration {
             let configuration = URLSessionConfiguration.default
             configuration.httpAdditionalHeaders = [
@@ -176,6 +187,9 @@ public extension EventSource {
                     delegate: sessionDelegate,
                     delegateQueue: nil
                 )
+                
+                self.urlSession = urlSession
+                
                 let urlSessionDataTask = urlSession.dataTask(with: urlRequest)
 
                 let sessionDelegateTask = Task { [weak self] in
@@ -184,16 +198,15 @@ public extension EventSource {
 
                         switch event {
                         case let .didCompleteWithError(error):
-                            handleSessionError(error, stream: continuation, urlSession: urlSession)
+                            handleSessionError(error, stream: continuation)
                         case let .didReceiveResponse(response, completionHandler):
                             handleSessionResponse(
                                 response,
                                 stream: continuation,
-                                urlSession: urlSession,
                                 completionHandler: completionHandler
                             )
                         case let .didReceiveData(data):
-                            parseMessages(from: data, stream: continuation, urlSession: urlSession)
+                            parseMessages(from: data, stream: continuation)
                         }
                     }
                 }
@@ -201,13 +214,13 @@ public extension EventSource {
                 #if compiler(>=6.0)
                 continuation.onTermination = { @Sendable [weak self] _ in
                     sessionDelegateTask.cancel()
-                    Task { self?.close(stream: continuation, urlSession: urlSession) }
+                    Task { self?.close(stream: continuation) }
                 }
                 #else
                 continuation.onTermination = { @Sendable _ in
                     sessionDelegateTask.cancel()
                     Task { [weak self] in
-                        await self?.close(stream: continuation, urlSession: urlSession)
+                        await self?.close(stream: continuation)
                     }
                 }
                 #endif
@@ -220,11 +233,10 @@ public extension EventSource {
 
         private func handleSessionError(
             _ error: Error?,
-            stream continuation: AsyncStream<EventType>.Continuation,
-            urlSession: URLSession
+            stream continuation: AsyncStream<EventType>.Continuation
         ) {
             guard readyState != .closed else {
-                close(stream: continuation, urlSession: urlSession)
+                close(stream: continuation)
                 return
             }
             
@@ -234,13 +246,12 @@ public extension EventSource {
             }
                     
             // Close connection
-            close(stream: continuation, urlSession: urlSession)
+            close(stream: continuation)
         }
 
         private func handleSessionResponse(
             _ response: URLResponse,
             stream continuation: AsyncStream<EventType>.Continuation,
-            urlSession: URLSession,
             completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
         ) {
             guard readyState != .closed else {
@@ -256,7 +267,7 @@ public extension EventSource {
             // Stop connection when 204 response code, otherwise keep open
             guard httpResponse.statusCode != 204 else {
                 completionHandler(.cancel)
-                close(stream: continuation, urlSession: urlSession)
+                close(stream: continuation)
                 return
             }
             
@@ -274,26 +285,24 @@ public extension EventSource {
         /// Closes the connection, if one was made,
         /// and sets the `readyState` property to `.closed`.
         /// - Returns: State before closing.
-        private func close(stream continuation: AsyncStream<EventType>.Continuation, urlSession: URLSession) {
+        private func close(stream continuation: AsyncStream<EventType>.Continuation) {
             let previousState = self.readyState
             if previousState != .closed {
                 continuation.yield(.closed)
                 continuation.finish()
             }
-            cancel(urlSession: urlSession)
+            cancel()
         }
 
         private func parseMessages(
             from data: Data,
-            stream continuation: AsyncStream<EventType>.Continuation,
-            urlSession: URLSession
+            stream continuation: AsyncStream<EventType>.Continuation
         ) {
             if let httpResponseErrorStatusCode {
                 self.httpResponseErrorStatusCode = nil
                 handleSessionError(
                     EventSourceError.connectionError(statusCode: httpResponseErrorStatusCode, response: data),
-                    stream: continuation,
-                    urlSession: urlSession
+                    stream: continuation
                 )
                 return
             }
@@ -325,10 +334,11 @@ public extension EventSource {
         /// The event stream supports cooperative task cancellation. However, it should be noted that
         /// canceling the parent Task only cancels the underlying `URLSessionDataTask` of
         /// ``EventSource/EventSource/DataTask``; this does not actually stop the ongoing request.
-        public func cancel(urlSession: URLSession) {
+        public func cancel() {
             readyState = .closed
             lastMessageId = ""
-            urlSession.invalidateAndCancel()
+            urlSession?.invalidateAndCancel()
+            urlSession = nil
         }
     }
 }
