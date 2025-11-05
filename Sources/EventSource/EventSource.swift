@@ -198,19 +198,10 @@ public extension EventSource {
                     }
                 }
 
-                #if compiler(>=6.0)
                 continuation.onTermination = { @Sendable [weak self] _ in
                     sessionDelegateTask.cancel()
                     Task { self?.close(stream: continuation, urlSession: urlSession) }
                 }
-                #else
-                continuation.onTermination = { @Sendable _ in
-                    sessionDelegateTask.cancel()
-                    Task { [weak self] in
-                        await self?.close(stream: continuation, urlSession: urlSession)
-                    }
-                }
-                #endif
 
                 urlSessionDataTask.resume()
                 readyState = .connecting
