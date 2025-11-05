@@ -316,7 +316,7 @@ public extension EventSource {
         /// The event stream supports cooperative task cancellation. However, it should be noted that
         /// canceling the parent Task only cancels the underlying `URLSessionDataTask` of
         /// ``EventSource/EventSource/DataTask``; this does not actually stop the ongoing request.
-        public func cancel(urlSession: URLSession) {
+        private func cancel(urlSession: URLSession) {
             readyState = .closed
             lastMessageId = ""
             urlSession.invalidateAndCancel()

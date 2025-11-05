@@ -55,7 +55,7 @@ Using EventSource is easy. Simply create a new data task from an instance of Eve
 ```swift
 import EventSource
 
-Task {
+let task = Task {
     let eventSource = EventSource()
     let dataTask = eventSource.dataTask(for: urlRequest)
     
@@ -74,7 +74,7 @@ Task {
 }
 ```
 
-Use `dataTask.cancel()` to explicitly close the connection. However, in that case `.closed` event won't be emitted.
+Use `task.cancel()` to explicitly close the connection. However, in that case `.closed` event won't be emitted.
 
 ### Data-only mode
 
