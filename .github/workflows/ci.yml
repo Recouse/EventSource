@@ -16,14 +16,6 @@ on:
 
 
 jobs:
-  macos-14:
-    name: Build macOS 14 (Swift 5.10)
-    runs-on: macos-14
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Build
-      run: swift build -v
   macos-15:
     name: Build macOS 15 (Swift 6.0)
     runs-on: macos-15
