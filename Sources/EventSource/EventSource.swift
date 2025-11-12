@@ -113,19 +113,11 @@ public extension EventSource {
                     }
                 }
             }
-            #if compiler(>=6.0)
+
             continuation.onTermination = { @Sendable [weak self] _ in
                 sessionDelegateTask.cancel()
                 Task { self?.close(stream: continuation, urlSession: urlSession) }
             }
-            #else
-            continuation.onTermination = { @Sendable _ in
-                sessionDelegateTask.cancel()
-                Task { [weak self] in
-                    await self?.close(stream: continuation, urlSession: urlSession)
-                }
-            }
-            #endif
 
             urlSessionDataTask.resume()
         }
@@ -376,7 +368,7 @@ public extension EventSource {
         /// The event stream supports cooperative task cancellation. However, it should be noted that
         /// canceling the parent Task only cancels the underlying `URLSessionDataTask` of
         /// ``EventSource/EventSource/DataTask``; this does not actually stop the ongoing request.
-        public func cancel(urlSession: URLSession) {
+        private func cancel(urlSession: URLSession) {
             readyState = .closed
             lastMessageId = ""
             urlSession.invalidateAndCancel()
