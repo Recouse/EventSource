@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -18,8 +18,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "EventSource",
-            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]),
+            name: "EventSource"),
         .testTarget(
             name: "EventSourceTests",
             dependencies: ["EventSource"]),
