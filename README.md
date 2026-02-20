@@ -1,5 +1,7 @@
 # EventSource
 
+[English](README.md) | [中文](README_zh.md)
+
 [![CI](https://github.com/Recouse/EventSource/actions/workflows/ci.yml/badge.svg)](https://github.com/Recouse/EventSource/actions/workflows/ci.yml)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FRecouse%2FEventSource%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/Recouse/EventSource)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FRecouse%2FEventSource%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/Recouse/EventSource)
