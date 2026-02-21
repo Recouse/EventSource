@@ -42,26 +42,39 @@ public struct EventSource: Sendable {
 
     private let eventParser: @Sendable () -> EventParser
 
-    public var timeoutInterval: TimeInterval
+    public var timeoutIntervalForRequest: TimeInterval
+    public var timeoutIntervalForResource: TimeInterval
+
     public var maxReconnectAttempts: Int
     public var reconnectInitialDelay: TimeInterval
     public var reconnectBackoffFactor: Double
 
-    public init(mode: Mode = .default, timeoutInterval: TimeInterval = 300) {
-        self.init(mode: mode, eventParser: ServerEventParser(mode: mode), timeoutInterval: timeoutInterval)
+    public init(
+        mode: Mode = .default,
+        timeoutIntervalForRequest: TimeInterval = 60,
+        timeoutIntervalForResource: TimeInterval = 300
+    ) {
+        self.init(
+            mode: mode,
+            eventParser: ServerEventParser(mode: mode),
+            timeoutIntervalForRequest: timeoutIntervalForRequest,
+            timeoutIntervalForResource: timeoutIntervalForResource
+        )
     }
 
     public init(
         mode: Mode = .default,
         eventParser: @autoclosure @escaping @Sendable () -> EventParser,
-        timeoutInterval: TimeInterval = 300,
+        timeoutIntervalForRequest: TimeInterval = 60,
+        timeoutIntervalForResource: TimeInterval = 300,
         maxReconnectAttempts: Int = 5,
         reconnectInitialDelay: TimeInterval = 1.0,
         reconnectBackoffFactor: Double = 2.0
     ) {
         self.mode = mode
         self.eventParser = eventParser
-        self.timeoutInterval = timeoutInterval
+        self.timeoutIntervalForRequest = timeoutIntervalForRequest
+        self.timeoutIntervalForResource = timeoutIntervalForResource
         self.maxReconnectAttempts = maxReconnectAttempts
         self.reconnectInitialDelay = reconnectInitialDelay
         self.reconnectBackoffFactor = reconnectBackoffFactor
@@ -71,7 +84,8 @@ public struct EventSource: Sendable {
         DataTask(
             urlRequest: urlRequest,
             eventParser: eventParser(),
-            timeoutInterval: timeoutInterval,
+            timeoutIntervalForRequest: timeoutIntervalForRequest,
+            timeoutIntervalForResource: timeoutIntervalForResource,
             maxReconnectAttempts: maxReconnectAttempts,
             reconnectInitialDelay: reconnectInitialDelay,
             reconnectBackoffFactor: reconnectBackoffFactor
@@ -186,7 +200,9 @@ public extension EventSource {
             }
         }
 
-        private let timeoutInterval: TimeInterval
+        private let timeoutIntervalForRequest: TimeInterval
+
+        private let timeoutIntervalForResource: TimeInterval
 
         private let _httpResponseErrorStatusCode: Mutex<Int?> = Mutex(nil)
 
@@ -217,22 +233,24 @@ public extension EventSource {
                 HTTPHeaderField.cacheControl: CacheControl.noStore,
                 HTTPHeaderField.lastEventID: lastMessageId
             ]
-            configuration.timeoutIntervalForRequest = self.timeoutInterval
-            configuration.timeoutIntervalForResource = self.timeoutInterval
+            configuration.timeoutIntervalForRequest = self.timeoutIntervalForRequest
+            configuration.timeoutIntervalForResource = self.timeoutIntervalForResource
             return configuration
         }
 
         internal init(
             urlRequest: URLRequest,
             eventParser: EventParser,
-            timeoutInterval: TimeInterval,
+            timeoutIntervalForRequest: TimeInterval,
+            timeoutIntervalForResource: TimeInterval,
             maxReconnectAttempts: Int,
             reconnectInitialDelay: TimeInterval,
             reconnectBackoffFactor: Double
         ) {
             self.urlRequest = urlRequest
             self._eventParser = Mutex(eventParser)
-            self.timeoutInterval = timeoutInterval
+            self.timeoutIntervalForRequest = timeoutIntervalForRequest
+            self.timeoutIntervalForResource = timeoutIntervalForResource
             self.maxReconnectAttempts = maxReconnectAttempts
             self.reconnectInitialDelay = reconnectInitialDelay
             self.reconnectBackoffFactor = reconnectBackoffFactor

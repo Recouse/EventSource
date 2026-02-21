@@ -50,15 +50,23 @@ struct ServerEventParser: EventParser {
         // chop everything before the last separator, going forward, O(n) complexity
         let bufferRange = data.startIndex ..< lastSeparator.upperBound
         let remainingRange = lastSeparator.upperBound ..< data.endIndex
-        let rawMessages: [Data] = if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, visionOS 1.0, *) {
-            data[bufferRange].split(separator: separator)
-        } else {
-            data[bufferRange].split(by: separator)
-        }
+        let rawMessages: [Data] = splitData(data[bufferRange], separator: separator)
         
         // now clean up the messages and return
         let cleanedMessages = rawMessages.map { cleanMessageData($0) }
         return (cleanedMessages, data[remainingRange])
+    }
+
+    private func splitData(_ data: Data, separator: [UInt8]) -> [Data] {
+        #if os(visionOS)
+        return data.split(separator: separator)
+        #else
+        if #available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *) {
+            return data.split(separator: separator)
+        } else {
+            return data.split(by: separator)
+        }
+        #endif
     }
 
     private func findLastSeparator(in data: Data, separators: [[UInt8]]) -> ([UInt8]?, Range<Data.Index>?) {
@@ -97,7 +105,7 @@ fileprivate extension Data {
     @available(iOS, deprecated: 16.0, obsoleted: 16.0, message: "This method is not recommended on iOS 16.0+")
     @available(watchOS, deprecated: 9.0, obsoleted: 9.0, message: "This method is not recommended on watchOS 9.0+")
     @available(tvOS, deprecated: 16.0, obsoleted: 16.0, message: "This method is not recommended on tvOS 16.0+")
-    @available(visionOS, deprecated: 1.0, obsoleted: 1.1, message: "This method is not recommended on visionOS 1.0+")
+    @available(visionOS, unavailable, message: "Use split(separator:) instead")
     func split(by separator: [UInt8]) -> [Data] {
         var chunks: [Data] = []
         var pos = startIndex
