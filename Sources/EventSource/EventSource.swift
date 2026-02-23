@@ -100,51 +100,7 @@ public extension EventSource {
     /// ``EventSource/EventSource/dataTask(for:)`` method on the EventSource instance. After creating a task,
     /// it can be started by iterating event stream returned by ``DataTask/events()``.
     final class DataTask: Sendable {
-        /// Initializes or reinitializes the SSE session
-        private func startSession(stream continuation: AsyncStream<EventType>.Continuation) {
-            let sessionDelegate = SessionDelegate()
-            let urlSession = URLSession(
-                configuration: urlSessionConfiguration,
-                delegate: sessionDelegate,
-                delegateQueue: nil
-            )
-            let urlSessionDataTask = urlSession.dataTask(with: urlRequest)
-            let sessionDelegateTask = Task { [weak self] in
-                for await event in sessionDelegate.eventStream {
-                    guard let self else { return }
-                    switch event {
-                    case let .didCompleteWithError(error):
-                        self.handleSessionError(error, stream: continuation, urlSession: urlSession)
-                    case let .didReceiveResponse(response, completionHandler):
-                        self.handleSessionResponse(
-                            response,
-                            stream: continuation,
-                            urlSession: urlSession,
-                            completionHandler: completionHandler
-                        )
-                    case let .didReceiveData(data):
-                        self.parseMessages(from: data, stream: continuation, urlSession: urlSession)
-                    }
-                }
-            }
 
-            continuation.onTermination = { @Sendable [weak self] _ in
-                sessionDelegateTask.cancel()
-                Task { self?.close(stream: continuation, urlSession: urlSession) }
-            }
-
-            urlSessionDataTask.resume()
-        }
-
-        /// Helper method for reconnection
-        private func attemptReconnect(stream continuation: AsyncStream<EventType>.Continuation) {
-            let delay = reconnectInitialDelay * pow(reconnectBackoffFactor, Double(reconnectAttempts - 1))
-            DispatchQueue.global().asyncAfter(deadline: .now() + delay) { [weak self] in
-                self?.startSession(stream: continuation)
-                self?.readyState = .connecting
-                self?.consumed = true
-            }
-        }
         private let _readyState: Mutex<ReadyState> = Mutex(.none)
 
         // Reconnection properties
@@ -269,6 +225,53 @@ public extension EventSource {
                 startSession(stream: continuation)
                 readyState = .connecting
                 consumed = true
+            }
+        }
+
+        /// Initializes or reinitializes the SSE session
+        private func startSession(stream continuation: AsyncStream<EventType>.Continuation) {
+            let sessionDelegate = SessionDelegate()
+            let urlSession = URLSession(
+                configuration: urlSessionConfiguration,
+                delegate: sessionDelegate,
+                delegateQueue: nil
+            )
+            let urlSessionDataTask = urlSession.dataTask(with: urlRequest)
+            let sessionDelegateTask = Task { [weak self] in
+                for await event in sessionDelegate.eventStream {
+                    guard let self else { return }
+                    switch event {
+                    case let .didCompleteWithError(error):
+                        self.handleSessionError(error, stream: continuation, urlSession: urlSession)
+                    case let .didReceiveResponse(response, completionHandler):
+                        self.handleSessionResponse(
+                            response,
+                            stream: continuation,
+                            urlSession: urlSession,
+                            completionHandler: completionHandler
+                        )
+                    case let .didReceiveData(data):
+                        self.parseMessages(from: data, stream: continuation, urlSession: urlSession)
+                    }
+                }
+            }
+
+            continuation.onTermination = { @Sendable [weak self] _ in
+                sessionDelegateTask.cancel()
+                Task { self?.close(stream: continuation, urlSession: urlSession) }
+            }
+
+            urlSessionDataTask.resume()
+        }
+
+        /// Helper method for reconnection
+        private func attemptReconnect(stream continuation: AsyncStream<EventType>.Continuation) {
+            let delay = reconnectInitialDelay * pow(reconnectBackoffFactor, Double(reconnectAttempts - 1))
+            Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                self?.startSession(stream: continuation)
+                self?.readyState = .connecting
+                self?.consumed = true
             }
         }
 
