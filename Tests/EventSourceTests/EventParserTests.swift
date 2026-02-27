@@ -189,7 +189,7 @@ struct EventParserTests {
 
         // Test with mixed LF (\n) and CR+LF (\r\n) - using separate events
         let textMixed = "data: test mixedline1\n\n" +
-                       "data: mixedline2\r\n\n" +
+                       "data: mixedline2\n\r\n" +
                        "event: update\r\ndata: mixedtest\n\n" +
                        "id: 4\nevent: pong\r\ndata: mixedpong\r\n\n"
         

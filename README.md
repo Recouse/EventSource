@@ -65,9 +65,15 @@ let task = Task {
             print("Connection was opened.")
         case .error(let error):
             print("Received an error:", error.localizedDescription)
+        case .recived(let data):
+            if let text = String(data: data, encoding: .utf8) {
+                print("Recived one stream: \(text)")
+            } else {
+                print("Recived one stream: \(data)")
+            }
         case .event(let event):
             print("Received an event", event.data ?? "")
-        case .closed:
+        case .closed(let undecodeText):
             print("Connection was closed.")
         }
     }

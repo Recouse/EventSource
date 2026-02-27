@@ -32,10 +32,11 @@ public struct EventSource: Sendable {
     
     /// Event type.
     public enum EventType: Sendable {
-        case error(Error)
-        case event(EVEvent)
         case open
-        case closed
+        case recived(Data)
+        case event(EVEvent)
+        case closed(String?)
+        case error(Error)
     }
 
     private let mode: Mode
@@ -211,6 +212,7 @@ public extension EventSource {
                                 completionHandler: completionHandler
                             )
                         case let .didReceiveData(data):
+                            continuation.yield(.recived(data))
                             parseMessages(from: data, stream: continuation, urlSession: urlSession)
                         }
                     }
@@ -218,7 +220,7 @@ public extension EventSource {
 
                 continuation.onTermination = { @Sendable [weak self] _ in
                     sessionDelegateTask.cancel()
-                    Task { self?.close(stream: continuation, urlSession: urlSession) }
+                    self?.close(stream: continuation, urlSession: urlSession)
                 }
 
                 urlSessionDataTask.resume()
@@ -286,7 +288,7 @@ public extension EventSource {
         private func close(stream continuation: AsyncStream<EventType>.Continuation, urlSession: URLSession) {
             let previousState = self.readyState
             if previousState != .closed {
-                continuation.yield(.closed)
+                continuation.yield(.closed((eventParser as? ServerEventParser)?.undeocdeText))
                 continuation.finish()
             }
             cancel(urlSession: urlSession)
