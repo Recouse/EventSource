@@ -43,27 +43,41 @@ public struct EventSource: Sendable {
 
     private let eventParser: @Sendable () -> EventParser
 
-    public var timeoutInterval: TimeInterval
+    public var timeoutIntervalForRequest: TimeInterval
 
-    public init(mode: Mode = .default, timeoutInterval: TimeInterval = 300) {
-        self.init(mode: mode, eventParser: ServerEventParser(mode: mode), timeoutInterval: timeoutInterval)
+    public var timeoutIntervalForResource: TimeInterval
+
+    public init(
+        mode: Mode = .default,
+        timeoutIntervalForRequest: TimeInterval = 60,
+        timeoutIntervalForResource: TimeInterval = 300
+    ) {
+        self.init(
+            mode: mode,
+            eventParser: ServerEventParser(mode: mode),
+            timeoutIntervalForRequest: timeoutIntervalForRequest,
+            timeoutIntervalForResource: timeoutIntervalForResource
+        )
     }
 
     public init(
         mode: Mode = .default,
         eventParser: @autoclosure @escaping @Sendable () -> EventParser,
-        timeoutInterval: TimeInterval = 300
+        timeoutIntervalForRequest: TimeInterval = 60,
+        timeoutIntervalForResource: TimeInterval = 300
     ) {
         self.mode = mode
         self.eventParser = eventParser
-        self.timeoutInterval = timeoutInterval
+        self.timeoutIntervalForRequest = timeoutIntervalForRequest
+        self.timeoutIntervalForResource = timeoutIntervalForResource
     }
 
     public func dataTask(for urlRequest: URLRequest) -> DataTask {
         DataTask(
             urlRequest: urlRequest,
             eventParser: eventParser(),
-            timeoutInterval: timeoutInterval
+            timeoutIntervalForRequest: timeoutIntervalForRequest,
+            timeoutIntervalForResource: timeoutIntervalForResource
         )
     }
 }
@@ -115,7 +129,9 @@ public extension EventSource {
             }
         }
 
-        private let timeoutInterval: TimeInterval
+        private let timeoutIntervalForRequest: TimeInterval
+
+        private let timeoutIntervalForResource: TimeInterval
 
         private let _httpResponseErrorStatusCode: Mutex<Int?> = Mutex(nil)
 
@@ -146,19 +162,21 @@ public extension EventSource {
                 HTTPHeaderField.cacheControl: CacheControl.noStore,
                 HTTPHeaderField.lastEventID: lastMessageId
             ]
-            configuration.timeoutIntervalForRequest = self.timeoutInterval
-            configuration.timeoutIntervalForResource = self.timeoutInterval
+            configuration.timeoutIntervalForRequest = self.timeoutIntervalForRequest
+            configuration.timeoutIntervalForResource = self.timeoutIntervalForResource
             return configuration
         }
 
         internal init(
             urlRequest: URLRequest,
             eventParser: EventParser,
-            timeoutInterval: TimeInterval
+            timeoutIntervalForRequest: TimeInterval,
+            timeoutIntervalForResource: TimeInterval
         ) {
             self.urlRequest = urlRequest
             self._eventParser = Mutex(eventParser)
-            self.timeoutInterval = timeoutInterval
+            self.timeoutIntervalForRequest = timeoutIntervalForRequest
+            self.timeoutIntervalForResource = timeoutIntervalForResource
         }
 
         /// Creates and returns event stream.
