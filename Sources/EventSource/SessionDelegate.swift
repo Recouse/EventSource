@@ -19,8 +19,14 @@ final class SessionDelegate: NSObject, URLSessionDataDelegate {
     }
 
     private let internalStream = AsyncStream<Event>.makeStream()
+    
+    private let urlSessionDelegate: URLSessionDelegate?
 
     var eventStream: AsyncStream<Event> { internalStream.stream }
+    
+    init(urlSessionDelegate: URLSessionDelegate?) {
+        self.urlSessionDelegate = urlSessionDelegate
+    }
 
     func urlSession(
         _ session: URLSession,
@@ -53,5 +59,12 @@ final class SessionDelegate: NSObject, URLSessionDataDelegate {
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
         completionHandler(.performDefaultHandling, nil)
+    }
+}
+
+extension SessionDelegate: URLSessionDelegate {
+    
+    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @Sendable @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        urlSessionDelegate?.urlSession?(session, didReceive: challenge, completionHandler: completionHandler)
     }
 }

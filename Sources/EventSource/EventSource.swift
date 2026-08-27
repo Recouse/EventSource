@@ -71,12 +71,13 @@ public struct EventSource: Sendable {
         self.timeoutIntervalForResource = timeoutIntervalForResource
     }
 
-    public func dataTask(for urlRequest: URLRequest) -> DataTask {
+    public func dataTask(for urlRequest: URLRequest, urlSessionDelegate: URLSessionDelegate? = nil) -> DataTask {
         DataTask(
             urlRequest: urlRequest,
             eventParser: eventParser(),
             timeoutIntervalForRequest: timeoutIntervalForRequest,
-            timeoutIntervalForResource: timeoutIntervalForResource
+            timeoutIntervalForResource: timeoutIntervalForResource,
+            urlSessionDelegate: urlSessionDelegate
         )
     }
 }
@@ -116,6 +117,8 @@ public extension EventSource {
 
         /// A URLRequest of the events source.
         public let urlRequest: URLRequest
+        
+        public let urlSessionDelegate: URLSessionDelegate?
 
         private let _eventParser: Mutex<EventParser>
 
@@ -170,12 +173,14 @@ public extension EventSource {
             urlRequest: URLRequest,
             eventParser: EventParser,
             timeoutIntervalForRequest: TimeInterval,
-            timeoutIntervalForResource: TimeInterval
+            timeoutIntervalForResource: TimeInterval,
+            urlSessionDelegate: URLSessionDelegate?
         ) {
             self.urlRequest = urlRequest
             self._eventParser = Mutex(eventParser)
             self.timeoutIntervalForRequest = timeoutIntervalForRequest
             self.timeoutIntervalForResource = timeoutIntervalForResource
+            self.urlSessionDelegate = urlSessionDelegate
         }
 
         /// Creates and returns event stream.
@@ -188,7 +193,7 @@ public extension EventSource {
             }
 
             return AsyncStream { continuation in
-                let sessionDelegate = SessionDelegate()
+                let sessionDelegate = SessionDelegate(urlSessionDelegate: urlSessionDelegate)
                 let urlSession = URLSession(
                     configuration: urlSessionConfiguration,
                     delegate: sessionDelegate,
